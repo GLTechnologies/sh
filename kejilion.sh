@@ -9362,7 +9362,6 @@ while true; do
 	  echo -e "${gl_kjlan}-------------------------"
 	  echo -e "${gl_kjlan}111. ${color111}多格式文件转换工具                  ${gl_kjlan}112. ${color112}Lucky大内网穿透工具"
 	  echo -e "${gl_kjlan}113. ${color113}Firefox浏览器                       ${gl_kjlan}114. ${color114}Xboard节点管理面板"
-	  echo -e "${gl_kjlan}115. ${color115}S-UI面板"
 	  echo -e "${gl_kjlan}-------------------------"
 	  echo -e "${gl_kjlan}第三方应用列表"
   	  echo -e "${gl_kjlan}想要让你的应用出现在这里？查看开发者指南: ${gl_huang}https://dev.kejilion.sh/${gl_bai}"
@@ -13069,42 +13068,6 @@ discourse,yunsou,ahhhhfs,nsgame,gying" \
 			docker_app_plus
 
 		  	;;
-
-		115|s-ui)
-			local app_id="115"
-			local app_name="S-UI节点面板"
-			local app_text="是一个基于 Laravel 11 构建的现代化节点面板系统，专注于提供简洁高效的用户体验。"
-			local app_url="官方网站: https://github.com/alireza0/s-ui"
-			local docker_name="s-ui"
-			local docker_port="8115"
-			local app_size="2"
-
-			docker_app_install() {
-				mkdir -p /home/docker/x-ui
-				cd /home/docker/x-ui
-
-				bash <(curl -Ls https://raw.githubusercontent.com/alireza0/s-ui/master/install.sh)
-				clear
-				echo "已经安装完成"
-				check_docker_app_ip
-			}
-
-
-			docker_app_update() {
-				cd /home/docker/x-ui/ && docker compose down --rmi all
-				cd /home/docker/x-ui/ && docker compose up -d
-			}
-
-
-			docker_app_uninstall() {
-				cd /home/docker/x-ui/ && docker compose down --rmi all
-				rm -rf /home/docker/x-ui
-				echo "应用已卸载"
-			}
-
-			docker_app_plus
-			;;
-
 
 	  b)
 	  	clear
