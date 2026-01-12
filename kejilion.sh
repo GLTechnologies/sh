@@ -15149,9 +15149,9 @@ while true; do
 			clear
 			local country=$(curl -s ipinfo.io/country)
 			if [ "$country" = "CN" ]; then
-				curl -sS -O ${gh_proxy}raw.githubusercontent.com/kejilion/sh/main/cn/kejilion.sh && chmod +x kejilion.sh
+				curl -sS -O ${gh_proxy}raw.githubusercontent.com/GLTechnologies/sh/main/cn/kejilion.sh && chmod +x kejilion.sh
 			else
-				curl -sS -O ${gh_proxy}raw.githubusercontent.com/kejilion/sh/main/kejilion.sh && chmod +x kejilion.sh
+				curl -sS -O ${gh_proxy}raw.githubusercontent.com/GLTechnologies/sh/main/kejilion.sh && chmod +x kejilion.sh
 			fi
 			canshu_v6
 			CheckFirstRun_true
@@ -15168,11 +15168,11 @@ while true; do
 			local country=$(curl -s ipinfo.io/country)
 			local ipv6_address=$(curl -s --max-time 1 ipv6.ip.sb)
 			if [ "$country" = "CN" ]; then
-				SH_Update_task="curl -sS -O https://gh.kejilion.pro/raw.githubusercontent.com/kejilion/sh/main/kejilion.sh && chmod +x kejilion.sh && sed -i 's/canshu=\"default\"/canshu=\"CN\"/g' ./kejilion.sh"
+				SH_Update_task="curl -sS -O https://gh.kejilion.pro/raw.githubusercontent.com/GLTechnologies/sh/main/kejilion.sh && chmod +x kejilion.sh && sed -i 's/canshu=\"default\"/canshu=\"CN\"/g' ./kejilion.sh"
 			elif [ -n "$ipv6_address" ]; then
-				SH_Update_task="curl -sS -O https://gh.kejilion.pro/raw.githubusercontent.com/kejilion/sh/main/kejilion.sh && chmod +x kejilion.sh && sed -i 's/canshu=\"default\"/canshu=\"V6\"/g' ./kejilion.sh"
+				SH_Update_task="curl -sS -O https://gh.kejilion.pro/raw.githubusercontent.com/GLTechnologies/sh/main/kejilion.sh && chmod +x kejilion.sh && sed -i 's/canshu=\"default\"/canshu=\"V6\"/g' ./kejilion.sh"
 			else
-				SH_Update_task="curl -sS -O https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh && chmod +x kejilion.sh"
+				SH_Update_task="curl -sS -O https://raw.githubusercontent.com/GLTechnologies/sh/main/kejilion.sh && chmod +x kejilion.sh"
 			fi
 			check_crontab_installed
 			(crontab -l | grep -v "kejilion.sh") | crontab -
