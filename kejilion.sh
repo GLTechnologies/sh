@@ -3474,10 +3474,6 @@ ldnmp_Proxy() {
 	wget -O /home/web/conf.d/map.conf ${gh_proxy}raw.githubusercontent.com/kejilion/nginx/main/map.conf
 	wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}raw.githubusercontent.com/kejilion/nginx/main/reverse-proxy-backend.conf
 
-	install_ssltls
-	certs_status
-
-
 	backend=$(tr -dc 'A-Za-z' < /dev/urandom | head -c 8)
 	sed -i "s/backend_yuming_com/backend_$backend/g" /home/web/conf.d/"$yuming".conf
 
@@ -3492,6 +3488,9 @@ ldnmp_Proxy() {
 
 	sed -i "s/# 动态添加/$upstream_servers/g" /home/web/conf.d/$yuming.conf
 	sed -i '/remote_addr/d' /home/web/conf.d/$yuming.conf
+
+	install_ssltls
+	certs_status
 
 	update_nginx_listen_port "$yuming" "$access_port"
 
@@ -3523,10 +3522,6 @@ ldnmp_Proxy_backend() {
 	wget -O /home/web/conf.d/map.conf ${gh_proxy}raw.githubusercontent.com/kejilion/nginx/main/map.conf
 	wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}raw.githubusercontent.com/kejilion/nginx/main/reverse-proxy-backend.conf
 
-
-	install_ssltls
-	certs_status
-
 	backend=$(tr -dc 'A-Za-z' < /dev/urandom | head -c 8)
 	sed -i "s/backend_yuming_com/backend_$backend/g" /home/web/conf.d/"$yuming".conf
 
@@ -3539,6 +3534,9 @@ ldnmp_Proxy_backend() {
 	done
 
 	sed -i "s/# 动态添加/$upstream_servers/g" /home/web/conf.d/$yuming.conf
+
+	install_ssltls
+	certs_status
 
 	update_nginx_listen_port "$yuming" "$access_port"
 
