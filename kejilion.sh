@@ -9399,7 +9399,7 @@ while true; do
 	  echo -e "${gl_kjlan}109. ${color109}ZFile在线网盘                       ${gl_kjlan}110. ${color110}Karakeep书签管理"
 	  echo -e "${gl_kjlan}-------------------------"
 	  echo -e "${gl_kjlan}111. ${color111}多格式文件转换工具                  ${gl_kjlan}112. ${color112}Lucky大内网穿透工具"
-	  echo -e "${gl_kjlan}113. ${color113}Firefox浏览器"
+	  echo -e "${gl_kjlan}113. ${color113}Firefox浏览器                       ${gl_kjlan}114. ${color114}Xboard节点管理面板"
 	  echo -e "${gl_kjlan}-------------------------"
 	  echo -e "${gl_kjlan}第三方应用列表"
   	  echo -e "${gl_kjlan}想要让你的应用出现在这里？查看开发者指南: ${gl_huang}https://dev.kejilion.sh/${gl_bai}"
@@ -13061,6 +13061,51 @@ discourse,yunsou,ahhhhfs,nsgame,gying" \
 		docker_app
 
 		  ;;
+
+		114|xboard)
+			local app_id="114"
+			local app_name="xboard节点管理面板"
+			local app_text="是一个基于 Laravel 11 构建的现代化节点面板系统，专注于提供简洁高效的用户体验。"
+			local app_url="官方网站: https://github.com/cedar2025/Xboard"
+			local docker_name="xboard"
+			local docker_port="8114"
+			local app_size="2"
+
+			docker_app_install() {
+				install git
+
+				mkdir -p /home/docker/xboard
+				cd /home/docker/xboard
+
+				git clone -b compose --depth 1 https://github.com/cedar2025/Xboard .
+
+				sed -i "s/7001:7001/${docker_port}:7001/g" /home/docker/xboard/compose.yaml
+				sed -i 's|\./|/home/docker/xboard/|g' /home/docker/xboard/compose.yaml
+				cd /home/docker/xboard/
+				docker compose run -it --rm web php artisan xboard:install
+				docker compose up -d
+				clear
+				echo "已经安装完成"
+				check_docker_app_ip
+			}
+
+
+			docker_app_update() {
+				cd /home/docker/xboard/ && docker compose pull
+				cd /home/docker/xboard/ && docker compose run -it --rm web php artisan xboard:update
+				cd /home/docker/xboard/ && docker compose up -d
+			}
+
+
+			docker_app_uninstall() {
+				cd /home/docker/xboard/ && docker compose down --rmi all
+				rm -rf /home/docker/xboard
+				echo "应用已卸载"
+			}
+
+			docker_app_plus
+
+		  	;;
 
 
 	  b)
