@@ -2909,7 +2909,7 @@ edit_app_description() {
 	local desc_file="/home/docker/app_desc/${docker_name}.txt"
 	local tmp_file="/tmp/${docker_name}_desc.tmp"
 	local lock_file="/tmp/${docker_name}_desc.lock"
-	local EDIT_TIMEOUT=600   # 10 分钟
+	local EDIT_TIMEOUT=300   # 5 分钟
 
 	mkdir -p /home/docker/app_desc
 
@@ -2921,7 +2921,7 @@ edit_app_description() {
 			return 1
 		fi
 
-		echo "请输入 ${docker_name} 的应用描述（最多 10 行，${EDIT_TIMEOUT} 秒内未保存将自动退出）"
+		echo -e "${gl_huang}请输入 ${docker_name} 的应用描述（最多 10 行，${EDIT_TIMEOUT} 秒内未保存将自动退出）${gl_bai}"
 
 		if [ -f "$desc_file" ]; then
 			cp "$desc_file" "$tmp_file"
@@ -2931,7 +2931,7 @@ edit_app_description() {
 
 		if ! command -v nano >/dev/null 2>&1; then
 			echo "未检测到 nano，正在安装..."
-			install nano
+			install nano >/dev/null 2>&1
 		fi
 
 		# ===== 启动超时看门狗 =====
@@ -2994,6 +2994,8 @@ while true; do
 	echo "------------------------"
 	echo "5. 添加域名访问      6. 删除域名访问"
 	echo "7. 允许IP+端口访问   8. 阻止IP+端口访问"
+	echo "------------------------"
+	echo "9. 应用描述"
 	echo "------------------------"
 	echo "0. 返回上一级选单"
 	echo "------------------------"
@@ -3068,6 +3070,10 @@ while true; do
 		8)
 			send_stats "阻止IP访问 ${docker_name}"
 			block_container_port "$docker_name" "$ipv4_address"
+			;;
+		9)
+			send_stats "应用描述 ${docker_name}"
+			edit_app_description "${docker_name}"
 			;;
 
 		*)
