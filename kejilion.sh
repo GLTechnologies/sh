@@ -2967,6 +2967,25 @@ edit_app_description() {
 	)
 }
 
+show_app_description() {
+	local docker_name="$1"
+	local desc_file="/home/docker/app_desc/${docker_name}.txt"
+	local max_lines=5
+
+	if [ ! -f "$desc_file" ] || [ ! -s "$desc_file" ]; then
+		return 0
+	fi
+
+	echo ""
+	echo "【应用描述】"
+	head -n "$max_lines" "$desc_file"
+
+	# 超过 max_lines 仅提示，不输出 ...
+	if [ "$(wc -l < "$desc_file")" -gt "$max_lines" ]; then
+		echo "（更多内容请进入「应用描述」查看）"
+	fi
+}
+
 
 
 docker_app() {
@@ -2988,6 +3007,9 @@ while true; do
 		local docker_port=$(cat "/home/docker/${docker_name}_port.conf")
 		check_docker_app_ip
 	fi
+	# ===== 应用描述 =====
+	show_app_description "$docker_name"
+	
 	echo ""
 	echo "------------------------"
 	echo "1. 安装              2. 更新            3. 卸载"
@@ -3085,10 +3107,6 @@ done
 
 }
 
-
-
-
-
 docker_app_plus() {
 	send_stats "$app_name"
 	while true; do
@@ -3108,13 +3126,7 @@ docker_app_plus() {
 			check_docker_app_ip
 		fi
 		# ===== 应用描述 =====
-		desc_file="/home/docker/app_desc/${docker_name}.txt"
-		if [ -f "$desc_file" ] && [ -s "$desc_file" ]; then
-			echo ""
-			echo "【应用描述】"
-			head -n 5 "$desc_file"
-			[ "$(wc -l < "$desc_file")" -gt 5 ]
-		fi
+		show_app_description "$docker_name"
 
 		echo ""
 		echo "------------------------"
