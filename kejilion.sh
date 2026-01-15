@@ -2905,6 +2905,69 @@ grep -qxF "${app_id}" /home/docker/appno.txt || echo "${app_id}" >> /home/docker
 
 }
 
+edit_app_description() {
+	local docker_name="$1"
+	local desc_file="/home/docker/app_desc/${docker_name}.txt"
+	local tmp_file="/tmp/${docker_name}_desc.tmp"
+	local lock_file="/tmp/${docker_name}_desc.lock"
+	local EDIT_TIMEOUT=600   # 10 分钟
+
+	mkdir -p /home/docker/app_desc
+
+	(
+		# ===== 子 shell 开始，获取文件锁 =====
+		exec 9>"$lock_file"
+		if ! flock -n 9; then
+			echo "该应用描述正在被其他会话编辑，请稍后再试"
+			return 1
+		fi
+
+		echo "请输入 ${docker_name} 的应用描述（最多 10 行，${EDIT_TIMEOUT} 秒内未保存将自动退出）"
+
+		if [ -f "$desc_file" ]; then
+			cp "$desc_file" "$tmp_file"
+		else
+			: > "$tmp_file"
+		fi
+
+		if ! command -v nano >/dev/null 2>&1; then
+			echo "未检测到 nano，正在安装..."
+			install nano
+		fi
+
+		# ===== 启动超时看门狗 =====
+		(
+			# ===== 关闭锁 FD，防止继承 =====
+			exec 9>&-
+
+			sleep "$EDIT_TIMEOUT"
+			echo "编辑超时，已自动退出"
+			pkill -P $$ nano vi 2>/dev/null
+		) &
+		local watchdog_pid=$!
+
+		# ===== 启动编辑器 =====
+		if command -v nano >/dev/null 2>&1; then
+			echo "编辑器提示：Ctrl+O 保存，Ctrl+X 退出"
+			sleep 1
+			nano "$tmp_file"
+		else
+			vi "$tmp_file"
+		fi
+
+		# ===== 编辑结束，关闭看门狗 =====
+		kill "$watchdog_pid" 2>/dev/null
+
+		# ===== 原子写入（10 行限制）=====
+		head -n 10 "$tmp_file" > "$desc_file"
+		rm -f "$tmp_file"
+
+		lines=$(wc -l < "$desc_file")
+		echo "应用描述已保存（${lines}/10 行）"
+		# ===== 释放锁（函数退出会自动释放 FD 9）=====
+	)
+}
+
 
 
 docker_app() {
@@ -3039,12 +3102,23 @@ docker_app_plus() {
 			local docker_port=$(cat "/home/docker/${docker_name}_port.conf")
 			check_docker_app_ip
 		fi
+		# ===== 应用描述 =====
+		desc_file="/home/docker/app_desc/${docker_name}.txt"
+		if [ -f "$desc_file" ] && [ -s "$desc_file" ]; then
+			echo ""
+			echo "【应用描述】"
+			head -n 5 "$desc_file"
+			[ "$(wc -l < "$desc_file")" -gt 5 ]
+		fi
+
 		echo ""
 		echo "------------------------"
 		echo "1. 安装             2. 更新             3. 卸载"
 		echo "------------------------"
 		echo "5. 添加域名访问     6. 删除域名访问"
 		echo "7. 允许IP+端口访问  8. 阻止IP+端口访问"
+		echo "------------------------"
+		echo "9. 应用描述"
 		echo "------------------------"
 		echo "0. 返回上一级选单"
 		echo "------------------------"
@@ -3098,6 +3172,10 @@ docker_app_plus() {
 			8)
 				send_stats "阻止IP访问 ${docker_name}"
 				block_container_port "$docker_name" "$ipv4_address"
+				;;
+			9)
+				send_stats "应用描述 ${docker_name}"
+				edit_app_description "${docker_name}"
 				;;
 			*)
 				break
