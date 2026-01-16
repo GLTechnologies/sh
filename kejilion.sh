@@ -2970,18 +2970,27 @@ edit_app_description() {
 show_app_description() {
 	local docker_name="$1"
 	local desc_file="/home/docker/app_desc/${docker_name}.txt"
-	local max_lines=5
+	local max_lines=5		# 屏幕最多显示行数
+	local max_total=10		# 描述总行数上限（用于 7/10）
 
 	if [ ! -f "$desc_file" ] || [ ! -s "$desc_file" ]; then
 		return 0
 	fi
 
+	local current_lines
+	current_lines=$(wc -l < "$desc_file")
+
+	# 防止超过上限显示
+	if [ "$current_lines" -gt "$max_total" ]; then
+		current_lines=$max_total
+	fi
+
 	echo ""
-	echo "【应用描述】"
+	echo "【应用描述】${current_lines}/${max_total}"
 	head -n "$max_lines" "$desc_file"
 
 	# 超过 max_lines 仅提示，不输出 ...
-	if [ "$(wc -l < "$desc_file")" -gt "$max_lines" ]; then
+	if [ "$current_lines" -gt "$max_lines" ]; then
 		echo "（更多内容请进入「应用描述」查看）"
 	fi
 }
