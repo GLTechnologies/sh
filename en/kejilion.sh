@@ -72,12 +72,12 @@ send_stats() {
 	local os_info=$(grep PRETTY_NAME /etc/os-release | cut -d '=' -f2 | tr -d '"')
 	local cpu_arch=$(uname -m)
 
-	(
-		curl -s -X POST "https://api.kejilion.pro/api/log" \
-			-H "Content-Type: application/json" \
-			-d "{\"action\":\"$1\",\"timestamp\":\"$(date -u '+%Y-%m-%d %H:%M:%S')\",\"country\":\"$country\",\"os_info\":\"$os_info\",\"cpu_arch\":\"$cpu_arch\",\"version\":\"$sh_v\"}" \
-		&>/dev/null
-	) &
+	#(
+	#	curl -s -X POST "https://api.kejilion.pro/api/log" \
+	#		-H "Content-Type: application/json" \
+	#		-d "{\"action\":\"$1\",\"timestamp\":\"$(date -u '+%Y-%m-%d %H:%M:%S')\",\"country\":\"$country\",\"os_info\":\"$os_info\",\"cpu_arch\":\"$cpu_arch\",\"version\":\"$sh_v\"}" \
+	#	&>/dev/null
+	#) &
 
 }
 
@@ -114,9 +114,9 @@ CheckFirstRun_false() {
 # Prompt user to agree to terms
 UserLicenseAgreement() {
 	clear
-	echo -e "${gl_kjlan}Welcome to the technology lion script toolbox${gl_bai}"
+	echo -e "${gl_kjlan}Welcome to GL Technology Script Toolbox${gl_bai}"
 	echo "When using the script for the first time, please read and agree to the User License Agreement."
-	echo "User License Agreement: https://blog.kejilion.pro/user-license-agreement/"
+	echo "User License Agreement: https://"
 	echo -e "----------------------"
 	read -r -p "Do you agree to the above terms? (y/n):" user_input
 
@@ -135,7 +135,48 @@ UserLicenseAgreement() {
 CheckFirstRun_false
 
 
+# Synchronize local time
+syncRTC() {
+	local Time_threshold=5
 
+	clear
+	local sys_ts=$(date +%s)
+
+	local rtc_ts=$(date -d "$(timedatectl | grep "RTC time" | awk -F': ' '{print $2}')" +%s)
+
+	# Calculate difference
+	local diff=$(( sys_ts - rtc_ts ))
+	local abs_diff=${diff#-}
+	
+	if [ "$abs_diff" -gt "$Time_threshold" ]; then
+		echo "System time: $(date -d"@${sys_ts}" "+%Y-%m-%d %H:%M:%S")"
+		echo "RTC time: $(date -d"@${rtc_ts}" "+%Y-%m-%d %H:%M:%S")"
+
+    	read -p "time difference${abs_diff}s, synchronize the system time to RTC time? (y/n):" yn
+        case $yn in
+            [Yy] )
+				echo "Synchronizing system time..."
+				rtc_ts=$(date -d "$(timedatectl | grep "RTC time" | awk -F': ' '{print $2}')" +%s)
+                
+				if sudo -n date -s "@$rtc_ts" >/dev/null 2>&1; then
+					echo -e "${gl_lv}Synchronization completed!${gl_bai}"
+				else
+					if sudo date -s "@$rtc_ts"; then
+						echo -e "${gl_lv}Synchronization completed!${gl_bai}"
+					else
+						echo -e "${gl_hong}Synchronization failed!${gl_bai}"
+					fi
+				fi
+				sleep 1
+                ;;
+            * )
+                echo -e "${gl_hong}Sync canceled.${gl_bai}"
+				sleep 1
+                ;;
+        esac
+	fi
+}
+syncRTC
 
 
 ip_address() {
@@ -1428,12 +1469,7 @@ install_certbot() {
 
 
 
-
-
-
-
 install_ssltls() {
-	  check_port > /dev/null 2>&1
 	  docker stop nginx > /dev/null 2>&1
 	  cd ~
 
@@ -1453,6 +1489,7 @@ install_ssltls() {
 				if ! iptables -C INPUT -p tcp --dport 80 -j ACCEPT 2>/dev/null; then
 					iptables -I INPUT 1 -p tcp --dport 80 -j ACCEPT
 				fi
+
 				docker run --rm -p 80:80 -v /etc/letsencrypt/:/etc/letsencrypt certbot/certbot certonly --standalone -d "$yuming" --email your@email.com --agree-tos --no-eff-email --force-renewal --key-type ecdsa
 			fi
 	  fi
@@ -2867,6 +2904,97 @@ grep -qxF "${app_id}" /home/docker/appno.txt || echo "${app_id}" >> /home/docker
 
 }
 
+edit_app_description() {
+	local docker_name="$1"
+	local desc_file="/home/docker/app_desc/${docker_name}.txt"
+	local tmp_file="/tmp/${docker_name}_desc.tmp"
+	local lock_file="/tmp/${docker_name}_desc.lock"
+	local EDIT_TIMEOUT=300   # 5 分钟
+
+	mkdir -p /home/docker/app_desc
+
+	(
+		# ===== Subshell starts, acquires file lock =====
+		exec 9>"$lock_file"
+		if ! flock -n 9; then
+			echo "The app description is being edited by another session, please try again later"
+			return 1
+		fi
+
+		echo -e "${gl_huang}Please enter${docker_name}Application description (max 10 lines,${EDIT_TIMEOUT}If not saved within seconds, it will automatically exit)${gl_bai}"
+
+		if [ -f "$desc_file" ]; then
+			cp "$desc_file" "$tmp_file"
+		else
+			: > "$tmp_file"
+		fi
+
+		if ! command -v nano >/dev/null 2>&1; then
+			echo "nano not detected, installing..."
+			install nano >/dev/null 2>&1
+		fi
+
+		# ===== Start timeout watchdog =====
+		(
+			# ===== Turn off lock FD to prevent inheritance =====
+			exec 9>&-
+
+			sleep "$EDIT_TIMEOUT"
+			echo "Editing timed out and exited automatically"
+			pkill -P $$ nano vi 2>/dev/null
+		) &
+		local watchdog_pid=$!
+
+		# ===== Launch editor =====
+		if command -v nano >/dev/null 2>&1; then
+			echo "Editor prompt: Ctrl+O to save, Ctrl+X to exit"
+			sleep 1
+			nano "$tmp_file"
+		else
+			vi "$tmp_file"
+		fi
+
+		# ===== End of editing, close watchdog =====
+		kill "$watchdog_pid" 2>/dev/null
+
+		# ===== Atomic writes (10 row limit) =====
+		head -n 10 "$tmp_file" > "$desc_file"
+		rm -f "$tmp_file"
+
+		lines=$(wc -l < "$desc_file")
+		echo "App description saved (${lines}/10 lines)"
+		# ===== Release the lock (FD 9 will be released automatically when the function exits) =====
+	)
+}
+
+show_app_description() {
+	local docker_name="$1"
+	local desc_file="/home/docker/app_desc/${docker_name}.txt"
+	local max_lines=5		# 屏幕最多显示行数
+	local max_total=10		# 描述总行数上限（用于 7/10）
+
+	if [ ! -f "$desc_file" ] || [ ! -s "$desc_file" ]; then
+		return 0
+	fi
+
+	local current_lines
+	current_lines=$(wc -l < "$desc_file")
+
+	# Prevent display exceeding the upper limit
+	if [ "$current_lines" -gt "$max_total" ]; then
+		current_lines=$max_total
+	fi
+
+	echo ""
+	echo "【Application Description】${current_lines}/${max_total}"
+	head -n "$max_lines" "$desc_file"
+
+	# Exceeding max_lines only prompts, does not output...
+	if [ "$current_lines" -gt "$max_lines" ]; then
+		echo "(Please go to "Application Description" for more information)"
+	fi
+}
+
 
 
 docker_app() {
@@ -2888,12 +3016,17 @@ while true; do
 		local docker_port=$(cat "/home/docker/${docker_name}_port.conf")
 		check_docker_app_ip
 	fi
+	# ===== Application Description =====
+	show_app_description "$docker_name"
+	
 	echo ""
 	echo "------------------------"
 	echo "1. Install 2. Update 3. Uninstall"
 	echo "------------------------"
 	echo "5. Add domain name access 6. Delete domain name access"
 	echo "7. Allow IP+port access 8. Block IP+port access"
+	echo "------------------------"
+	echo "9. Application description"
 	echo "------------------------"
 	echo "0. Return to the previous menu"
 	echo "------------------------"
@@ -2902,9 +3035,18 @@ while true; do
 		1)
 			setup_docker_dir
 			check_disk_space $app_size /home/docker
-			read -e -p "Enter the application external service port and press Enter to use it by default.${docker_port}port:" app_port
-			local app_port=${app_port:-${docker_port}}
-			local docker_port=$app_port
+			while true; do
+				read -e -p "Enter the application external service port and press Enter to use it by default.${docker_port}port:" app_port
+				local app_port=${app_port:-${docker_port}}
+
+				if ss -tuln | grep -q ":$app_port "; then
+					echo -e "${gl_hong}mistake:${gl_bai}port$app_portAlready occupied, please change a port"
+					send_stats "Application port is occupied"
+				else
+					local docker_port=$app_port
+					break
+				fi
+			done
 
 			install jq
 			install_docker
@@ -2969,6 +3111,10 @@ while true; do
 			send_stats "Block IP access${docker_name}"
 			block_container_port "$docker_name" "$ipv4_address"
 			;;
+		9)
+			send_stats "Application description${docker_name}"
+			edit_app_description "${docker_name}"
+			;;
 
 		*)
 			break
@@ -2978,10 +3124,6 @@ while true; do
 done
 
 }
-
-
-
-
 
 docker_app_plus() {
 	send_stats "$app_name"
@@ -3001,12 +3143,17 @@ docker_app_plus() {
 			local docker_port=$(cat "/home/docker/${docker_name}_port.conf")
 			check_docker_app_ip
 		fi
+		# ===== Application Description =====
+		show_app_description "$docker_name"
+
 		echo ""
 		echo "------------------------"
 		echo "1. Install 2. Update 3. Uninstall"
 		echo "------------------------"
 		echo "5. Add domain name access 6. Delete domain name access"
 		echo "7. Allow IP+port access 8. Block IP+port access"
+		echo "------------------------"
+		echo "9. Application description"
 		echo "------------------------"
 		echo "0. Return to the previous menu"
 		echo "------------------------"
@@ -3015,9 +3162,19 @@ docker_app_plus() {
 			1)
 				setup_docker_dir
 				check_disk_space $app_size /home/docker
-				read -e -p "Enter the application external service port and press Enter to use it by default.${docker_port}port:" app_port
-				local app_port=${app_port:-${docker_port}}
-				local docker_port=$app_port
+				while true; do
+					read -e -p "Enter the application external service port and press Enter to use it by default.${docker_port}port:" app_port
+					local app_port=${app_port:-${docker_port}}
+
+					if ss -tuln | grep -q ":$app_port "; then
+						echo -e "${gl_hong}mistake:${gl_bai}port$app_portAlready occupied, please change a port"
+						send_stats "Application port is occupied"
+					else
+						local docker_port=$app_port
+						break
+					fi
+				done
+
 				install jq
 				install_docker
 				docker_app_install
@@ -3060,6 +3217,10 @@ docker_app_plus() {
 			8)
 				send_stats "Block IP access${docker_name}"
 				block_container_port "$docker_name" "$ipv4_address"
+				;;
+			9)
+				send_stats "Application description${docker_name}"
+				edit_app_description "${docker_name}"
 				;;
 			*)
 				break
@@ -3436,10 +3597,6 @@ ldnmp_Proxy() {
 	wget -O /home/web/conf.d/map.conf ${gh_proxy}raw.githubusercontent.com/kejilion/nginx/main/map.conf
 	wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}raw.githubusercontent.com/kejilion/nginx/main/reverse-proxy-backend.conf
 
-	install_ssltls
-	certs_status
-
-
 	backend=$(tr -dc 'A-Za-z' < /dev/urandom | head -c 8)
 	sed -i "s/backend_yuming_com/backend_$backend/g" /home/web/conf.d/"$yuming".conf
 
@@ -3454,6 +3611,9 @@ ldnmp_Proxy() {
 
 	sed -i "s/# dynamically add/$upstream_servers/g" /home/web/conf.d/$yuming.conf
 	sed -i '/remote_addr/d' /home/web/conf.d/$yuming.conf
+
+	install_ssltls
+	certs_status
 
 	update_nginx_listen_port "$yuming" "$access_port"
 
@@ -3485,10 +3645,6 @@ ldnmp_Proxy_backend() {
 	wget -O /home/web/conf.d/map.conf ${gh_proxy}raw.githubusercontent.com/kejilion/nginx/main/map.conf
 	wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}raw.githubusercontent.com/kejilion/nginx/main/reverse-proxy-backend.conf
 
-
-	install_ssltls
-	certs_status
-
 	backend=$(tr -dc 'A-Za-z' < /dev/urandom | head -c 8)
 	sed -i "s/backend_yuming_com/backend_$backend/g" /home/web/conf.d/"$yuming".conf
 
@@ -3501,6 +3657,9 @@ ldnmp_Proxy_backend() {
 	done
 
 	sed -i "s/# dynamically add/$upstream_servers/g" /home/web/conf.d/$yuming.conf
+
+	install_ssltls
+	certs_status
 
 	update_nginx_listen_port "$yuming" "$access_port"
 
@@ -4863,7 +5022,7 @@ add_sshkey() {
 		   -e 's/^\s*#\?\s*ChallengeResponseAuthentication .*/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config
 	rm -rf /etc/ssh/sshd_config.d/* /etc/ssh/ssh_config.d/*
 	restart_ssh
-	echo -e "${gl_lv}ROOT private key login has been turned on, ROOT password login has been turned off, and reconnection will take effect.${gl_bai}"
+	echo -e "${gl_lv}ROOT private key login has been turned on, ROOT password login has been turned off, reconnection will take effect${gl_bai}"
 
 }
 
@@ -4913,7 +5072,7 @@ echo -e "${gl_lv}ROOT login setup is completed!${gl_bai}"
 
 root_use() {
 clear
-[ "$EUID" -ne 0 ] && echo -e "${gl_huang}hint:${gl_bai}This function requires root user to run!" && break_end && kejilion
+[ "$EUID" -ne 0 ] && echo -e "${gl_huang}hint:${gl_bai}This feature requires root user to run!" && break_end && kejilion
 }
 
 
@@ -5797,7 +5956,7 @@ Kernel_optimize() {
 			  cd ~
 			  clear
 			  optimize_web_server
-			  send_stats "Website optimization mode"
+			  send_stats "Website optimization model"
 			  ;;
 		  4)
 			  cd ~
@@ -6060,9 +6219,9 @@ send_stats "Command Favorites"
 bash <(curl -l -s ${gh_proxy}raw.githubusercontent.com/byJoey/cmdbox/refs/heads/main/install.sh)
 }
 
-# Create backup
+# Create a backup
 create_backup() {
-	send_stats "Create backup"
+	send_stats "Create a backup"
 	local TIMESTAMP=$(date +"%Y%m%d%H%M%S")
 
 	# Prompt user for backup directory
@@ -6104,7 +6263,7 @@ create_backup() {
 		echo "- $path"
 	done
 
-	# Create backup
+	# Create a backup
 	echo "Creating backup$BACKUP_NAME..."
 	install tar
 	tar -czvf "$BACKUP_DIR/$BACKUP_NAME" "${BACKUP_PATHS[@]}"
@@ -9361,7 +9520,7 @@ while true; do
 	  echo -e "${gl_kjlan}109. ${color109}ZFile online network disk${gl_kjlan}110. ${color110}Karakeep bookmark management"
 	  echo -e "${gl_kjlan}-------------------------"
 	  echo -e "${gl_kjlan}111. ${color111}Multi-format file conversion tool${gl_kjlan}112. ${color112}Lucky large intranet penetration tool"
-	  echo -e "${gl_kjlan}113. ${color113}Firefox browser"
+	  echo -e "${gl_kjlan}113. ${color113}Firefox browser${gl_kjlan}114. ${color114}Xboard node management panel"
 	  echo -e "${gl_kjlan}-------------------------"
 	  echo -e "${gl_kjlan}Third-party application list"
   	  echo -e "${gl_kjlan}Want your app to appear here? Check out the developer guide:${gl_huang}https://dev.kejilion.sh/${gl_bai}"
@@ -9666,7 +9825,7 @@ while true; do
 			check_docker_image_update $docker_name
 
 			clear
-			echo -e "postal services$check_docker $update_status"
+			echo -e "postal service$check_docker $update_status"
 			echo "poste.io is an open source mail server solution,"
 			echo "Video introduction: https://www.bilibili.com/video/BV1wv421C71t?t=0.1"
 
@@ -11404,7 +11563,7 @@ while true; do
 
 		}
 
-		local docker_describe="Is a lightweight, high-performance music streaming server"
+		local docker_describe="It is a lightweight, high-performance music streaming server"
 		local docker_url="Official website introduction: https://www.navidrome.org/"
 		local docker_use=""
 		local docker_passwd=""
@@ -11739,7 +11898,7 @@ while true; do
 		  docker_app_uninstall() {
 			  cd /home/docker/linkwarden && docker compose down --rmi all
 			  rm -rf /home/docker/linkwarden
-			  echo "App uninstalled"
+			  echo "App has been uninstalled"
 		  }
 
 		  docker_app_plus
@@ -13024,6 +13183,51 @@ discourse,yunsou,ahhhhfs,nsgame,gying" \
 
 		  ;;
 
+		114|xboard)
+			local app_id="114"
+			local app_name="xboard node management panel"
+			local app_text="It is a modern node panel system built on Laravel 11, focusing on providing a simple and efficient user experience."
+			local app_url="Official website: https://github.com/cedar2025/Xboard"
+			local docker_name="xboard"
+			local docker_port="8114"
+			local app_size="2"
+
+			docker_app_install() {
+				install git
+
+				mkdir -p /home/docker/xboard
+				cd /home/docker/xboard
+
+				git clone -b compose --depth 1 https://github.com/cedar2025/Xboard .
+
+				sed -i "s/7001:7001/${docker_port}:7001/g" /home/docker/xboard/compose.yaml
+				sed -i 's|\./|/home/docker/xboard/|g' /home/docker/xboard/compose.yaml
+				cd /home/docker/xboard/
+				docker compose run -it --rm web php artisan xboard:install
+				docker compose up -d
+				clear
+				echo "Installation completed"
+				check_docker_app_ip
+			}
+
+
+			docker_app_update() {
+				cd /home/docker/xboard/ && docker compose pull
+				cd /home/docker/xboard/ && docker compose run -it --rm web php artisan xboard:update
+				cd /home/docker/xboard/ && docker compose up -d
+			}
+
+
+			docker_app_uninstall() {
+				cd /home/docker/xboard/ && docker compose down --rmi all
+				rm -rf /home/docker/xboard
+				echo "App has been uninstalled"
+			}
+
+			docker_app_plus
+
+		  	;;
+
 
 	  b)
 	  	clear
@@ -13484,7 +13688,7 @@ linux_Settings() {
 			echo "python version management"
 			echo "Video introduction: https://www.bilibili.com/video/BV1Pm42157cK?t=0.1"
 			echo "---------------------------------------"
-			echo "This function can seamlessly install any version officially supported by python!"
+			echo "This function can seamlessly install any version officially supported by Python!"
 			local VERSION=$(python3 -V 2>&1 | awk '{print $2}')
 			echo -e "Current python version number:${gl_huang}$VERSION${gl_bai}"
 			echo "------------"
@@ -14421,7 +14625,7 @@ EOF
 			  echo -e "7. Turn on${gl_huang}BBR${gl_bai}accelerate"
 			  echo -e "8. Set time zone to${gl_huang}Shanghai${gl_bai}"
 			  echo -e "9. Automatically optimize DNS addresses${gl_huang}Overseas: 1.1.1.1 8.8.8.8 Domestic: 223.5.5.5${gl_bai}"
-		  	  echo -e "10. Set the network to${gl_huang}IPv4 priority${gl_bai}"
+		  	  echo -e "10. Set the network to${gl_huang}ipv4 priority${gl_bai}"
 			  echo -e "11. Install basic tools${gl_huang}docker wget sudo tar unzip socat btop nano vim${gl_bai}"
 			  echo -e "12. Linux system kernel parameter optimization switches to${gl_huang}Balanced optimization mode${gl_bai}"
 			  echo "------------------------------------------------"
@@ -14470,7 +14674,7 @@ EOF
 				  echo -e "[${gl_lv}OK${gl_bai}] 9/12. Automatically optimize DNS address${gl_huang}${gl_bai}"
 				  echo "------------------------------------------------"
 				  prefer_ipv4
-				  echo -e "[${gl_lv}OK${gl_bai}] 10/12. Set the network to${gl_huang}IPv4 priority${gl_bai}}"
+				  echo -e "[${gl_lv}OK${gl_bai}] 10/12. Set the network to${gl_huang}ipv4 priority${gl_bai}}"
 
 				  echo "------------------------------------------------"
 				  install_docker
@@ -14832,7 +15036,7 @@ run_commands_on_servers() {
 		local username=${SERVER_ARRAY[i+3]}
 		local password=${SERVER_ARRAY[i+4]}
 		echo
-		echo -e "${gl_huang}Connect to$name ($hostname)...${gl_bai}"
+		echo -e "${gl_huang}connect to$name ($hostname)...${gl_bai}"
 		# sshpass -p "$password" ssh -o StrictHostKeyChecking=no "$username@$hostname" -p "$port" "$1"
 		sshpass -p "$password" ssh -t -o StrictHostKeyChecking=no "$username@$hostname" -p "$port" "$1"
 	done
@@ -14866,7 +15070,7 @@ while true; do
 	  echo -e "${gl_kjlan}Execute tasks in batches${gl_bai}"
 	  echo -e "${gl_kjlan}11. ${gl_bai}Install technology lion script${gl_kjlan}12. ${gl_bai}Update system${gl_kjlan}13. ${gl_bai}Clean the system"
 	  echo -e "${gl_kjlan}14. ${gl_bai}Install docker${gl_kjlan}15. ${gl_bai}Install BBR3${gl_kjlan}16. ${gl_bai}Set 1G virtual memory"
-	  echo -e "${gl_kjlan}17. ${gl_bai}Set time zone to Shanghai${gl_kjlan}18. ${gl_bai}Open all ports${gl_kjlan}51. ${gl_bai}custom directive"
+	  echo -e "${gl_kjlan}17. ${gl_bai}Set time zone to Shanghai${gl_kjlan}18. ${gl_bai}Open all ports${gl_kjlan}51. ${gl_bai}Custom instructions"
 	  echo -e "${gl_kjlan}------------------------${gl_bai}"
 	  echo -e "${gl_kjlan}0.  ${gl_bai}Return to main menu"
 	  echo -e "${gl_kjlan}------------------------${gl_bai}"
@@ -14983,7 +15187,7 @@ echo "------------------------"
 echo -e "${gl_zi}V.PS 6.9 dollars per month Tokyo Softbank 2 cores 1G memory 20G hard drive 1T traffic per month${gl_bai}"
 echo -e "${gl_bai}URL: https://vps.hosting/cart/tokyo-cloud-kvm-vps/?id=148&?affid=1355&?affid=1355${gl_bai}"
 echo "------------------------"
-echo -e "${gl_kjlan}More popular VPS deals${gl_bai}"
+echo -e "${gl_kjlan}More popular VPS offers${gl_bai}"
 echo -e "${gl_bai}Website: https://kejilion.pro/topvps/${gl_bai}"
 echo "------------------------"
 echo ""
@@ -14993,13 +15197,13 @@ echo -e "${gl_lan}GNAME $8.8 first-year COM domain name $6.68 first-year CC doma
 echo -e "${gl_bai}Website: https://www.gname.com/register?tt=86836&ttcode=KEJILION86836&ttbj=sh${gl_bai}"
 echo "------------------------"
 echo ""
-echo -e "Technology lion peripherals"
+echo -e "GL technology peripherals"
 echo "------------------------"
 echo -e "${gl_kjlan}Station B:${gl_bai}https://b23.tv/2mqnQyh              ${gl_kjlan}Oil pipe:${gl_bai}https://www.youtube.com/@kejilion${gl_bai}"
 echo -e "${gl_kjlan}Official website:${gl_bai}https://kejilion.pro/              ${gl_kjlan}navigation:${gl_bai}https://dh.kejilion.pro/${gl_bai}"
 echo -e "${gl_kjlan}blog:${gl_bai}https://blog.kejilion.pro/         ${gl_kjlan}Software Center:${gl_bai}https://app.kejilion.pro/${gl_bai}"
 echo "------------------------"
-echo -e "${gl_kjlan}Script official website:${gl_bai}https://kejilion.sh            ${gl_kjlan}GitHub address:${gl_bai}https://github.com/kejilion/sh${gl_bai}"
+echo -e "${gl_kjlan}Script official website:${gl_bai}https://kejilion.sh            ${gl_kjlan}GitHub address:${gl_bai}https://github.com/GLTechnologies/sh${gl_bai}"
 echo "------------------------"
 echo ""
 }
@@ -15074,11 +15278,11 @@ while true; do
 	clear
 	echo "Change log"
 	echo "------------------------"
-	echo "All logs:${gh_proxy}raw.githubusercontent.com/kejilion/sh/main/kejilion_sh_log.txt"
+	echo "All logs:${gh_proxy}raw.githubusercontent.com/GLTechnologies/sh/main/kejilion_sh_log.txt"
 	echo "------------------------"
 
-	curl -s ${gh_proxy}raw.githubusercontent.com/kejilion/sh/main/kejilion_sh_log.txt | tail -n 30
-	local sh_v_new=$(curl -s ${gh_proxy}raw.githubusercontent.com/kejilion/sh/main/kejilion.sh | grep -o 'sh_v="[0-9.]*"' | cut -d '"' -f 2)
+	curl -s ${gh_proxy}raw.githubusercontent.com/GLTechnologies/sh/main/kejilion_sh_log.txt | tail -n 30
+	local sh_v_new=$(curl -s ${gh_proxy}raw.githubusercontent.com/GLTechnologies/sh/main/kejilion.sh | grep -o 'sh_v="[0-9.]*"' | cut -d '"' -f 2)
 
 	if [ "$sh_v" = "$sh_v_new" ]; then
 		echo -e "${gl_lv}You are already on the latest version!${gl_huang}v$sh_v${gl_bai}"
@@ -15108,9 +15312,9 @@ while true; do
 			clear
 			local country=$(curl -s ipinfo.io/country)
 			if [ "$country" = "CN" ]; then
-				curl -sS -O ${gh_proxy}raw.githubusercontent.com/kejilion/sh/main/cn/kejilion.sh && chmod +x kejilion.sh
+				curl -sS -O ${gh_proxy}raw.githubusercontent.com/GLTechnologies/sh/main/cn/kejilion.sh && chmod +x kejilion.sh
 			else
-				curl -sS -O ${gh_proxy}raw.githubusercontent.com/kejilion/sh/main/kejilion.sh && chmod +x kejilion.sh
+				curl -sS -O ${gh_proxy}raw.githubusercontent.com/GLTechnologies/sh/main/kejilion.sh && chmod +x kejilion.sh
 			fi
 			canshu_v6
 			CheckFirstRun_true
@@ -15127,11 +15331,11 @@ while true; do
 			local country=$(curl -s ipinfo.io/country)
 			local ipv6_address=$(curl -s --max-time 1 ipv6.ip.sb)
 			if [ "$country" = "CN" ]; then
-				SH_Update_task="curl -sS -O https://gh.kejilion.pro/raw.githubusercontent.com/kejilion/sh/main/kejilion.sh && chmod +x kejilion.sh && sed -i 's/canshu=\"default\"/canshu=\"CN\"/g' ./kejilion.sh"
+				SH_Update_task="curl -sS -O https://gh.kejilion.pro/raw.githubusercontent.com/GLTechnologies/sh/main/kejilion.sh && chmod +x kejilion.sh && sed -i 's/canshu=\"default\"/canshu=\"CN\"/g' ./kejilion.sh"
 			elif [ -n "$ipv6_address" ]; then
-				SH_Update_task="curl -sS -O https://gh.kejilion.pro/raw.githubusercontent.com/kejilion/sh/main/kejilion.sh && chmod +x kejilion.sh && sed -i 's/canshu=\"default\"/canshu=\"V6\"/g' ./kejilion.sh"
+				SH_Update_task="curl -sS -O https://gh.kejilion.pro/raw.githubusercontent.com/GLTechnologies/sh/main/kejilion.sh && chmod +x kejilion.sh && sed -i 's/canshu=\"default\"/canshu=\"V6\"/g' ./kejilion.sh"
 			else
-				SH_Update_task="curl -sS -O https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh && chmod +x kejilion.sh"
+				SH_Update_task="curl -sS -O https://raw.githubusercontent.com/GLTechnologies/sh/main/kejilion.sh && chmod +x kejilion.sh"
 			fi
 			check_crontab_installed
 			(crontab -l | grep -v "kejilion.sh") | crontab -
@@ -15167,7 +15371,7 @@ echo -e "${gl_kjlan}"
 echo "╦╔═╔═╗ ╦╦╦  ╦╔═╗╔╗╔ ╔═╗╦ ╦"
 echo "╠╩╗║╣  ║║║  ║║ ║║║║ ╚═╗╠═╣"
 echo "╩ ╩╚═╝╚╝╩╩═╝╩╚═╝╝╚╝o╚═╝╩ ╩"
-echo -e "Technology lion script toolbox v$sh_v"
+echo -e "GL Technology Script Toolbox v$sh_v"
 echo -e "Command line input${gl_huang}k${gl_kjlan}Quick start script${gl_bai}"
 echo -e "${gl_kjlan}------------------------${gl_bai}"
 echo -e "${gl_kjlan}1.   ${gl_bai}System information query"
@@ -15256,7 +15460,7 @@ echo "docker container management k docker ps |k docker container"
 echo "docker image management k docker img |k docker image"
 echo "LDNMP site management k web"
 echo "LDNMP cache cleaning k web cache"
-echo "安装WordPress       k wp |k wordpress |k wp xxx.com"
+echo "Install WordPress k wp | k wordpress | k wp xxx.com"
 echo "Install reverse proxy k fd |k rp |k reverse proxy |k fd xxx.com"
 echo "Install load balancing k loadbalance |k load balancing"
 echo "Install L4 load balancing k stream |k L4 load balancing"

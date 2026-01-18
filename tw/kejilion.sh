@@ -72,12 +72,12 @@ send_stats() {
 	local os_info=$(grep PRETTY_NAME /etc/os-release | cut -d '=' -f2 | tr -d '"')
 	local cpu_arch=$(uname -m)
 
-	(
-		curl -s -X POST "https://api.kejilion.pro/api/log" \
-			-H "Content-Type: application/json" \
-			-d "{\"action\":\"$1\",\"timestamp\":\"$(date -u '+%Y-%m-%d %H:%M:%S')\",\"country\":\"$country\",\"os_info\":\"$os_info\",\"cpu_arch\":\"$cpu_arch\",\"version\":\"$sh_v\"}" \
-		&>/dev/null
-	) &
+	#(
+	#	curl -s -X POST "https://api.kejilion.pro/api/log" \
+	#		-H "Content-Type: application/json" \
+	#		-d "{\"action\":\"$1\",\"timestamp\":\"$(date -u '+%Y-%m-%d %H:%M:%S')\",\"country\":\"$country\",\"os_info\":\"$os_info\",\"cpu_arch\":\"$cpu_arch\",\"version\":\"$sh_v\"}" \
+	#	&>/dev/null
+	#) &
 
 }
 
@@ -114,9 +114,9 @@ CheckFirstRun_false() {
 # 提示用戶同意條款
 UserLicenseAgreement() {
 	clear
-	echo -e "${gl_kjlan}歡迎使用科技lion腳本工具箱${gl_bai}"
+	echo -e "${gl_kjlan}歡迎使用GL科技腳本工具箱${gl_bai}"
 	echo "首次使用腳本，請先閱讀並同意用戶許可協議。"
-	echo "用戶許可協議: https://blog.kejilion.pro/user-license-agreement/"
+	echo "用戶許可協議: https://"
 	echo -e "----------------------"
 	read -r -p "是否同意以上條款？ (y/n):" user_input
 
@@ -135,7 +135,48 @@ UserLicenseAgreement() {
 CheckFirstRun_false
 
 
+# 同步本地時間
+syncRTC() {
+	local Time_threshold=5
 
+	clear
+	local sys_ts=$(date +%s)
+
+	local rtc_ts=$(date -d "$(timedatectl | grep "RTC time" | awk -F': ' '{print $2}')" +%s)
+
+	# 計算差值
+	local diff=$(( sys_ts - rtc_ts ))
+	local abs_diff=${diff#-}
+	
+	if [ "$abs_diff" -gt "$Time_threshold" ]; then
+		echo "系統 時間: $(date -d"@${sys_ts}" "+%Y-%m-%d %H:%M:%S")"
+		echo "RTC 時間: $(date -d"@${rtc_ts}" "+%Y-%m-%d %H:%M:%S")"
+
+    	read -p "時間相差${abs_diff}s，是否將系統時間同步為 RTC 時間？ (y/n):" yn
+        case $yn in
+            [Yy] )
+				echo "正在同步系統時間..."
+				rtc_ts=$(date -d "$(timedatectl | grep "RTC time" | awk -F': ' '{print $2}')" +%s)
+                
+				if sudo -n date -s "@$rtc_ts" >/dev/null 2>&1; then
+					echo -e "${gl_lv}同步完成！${gl_bai}"
+				else
+					if sudo date -s "@$rtc_ts"; then
+						echo -e "${gl_lv}同步完成！${gl_bai}"
+					else
+						echo -e "${gl_hong}同步失敗！${gl_bai}"
+					fi
+				fi
+				sleep 1
+                ;;
+            * )
+                echo -e "${gl_hong}已取消同步。${gl_bai}"
+				sleep 1
+                ;;
+        esac
+	fi
+}
+syncRTC
 
 
 ip_address() {
@@ -1428,12 +1469,7 @@ install_certbot() {
 
 
 
-
-
-
-
 install_ssltls() {
-	  check_port > /dev/null 2>&1
 	  docker stop nginx > /dev/null 2>&1
 	  cd ~
 
@@ -1453,6 +1489,7 @@ install_ssltls() {
 				if ! iptables -C INPUT -p tcp --dport 80 -j ACCEPT 2>/dev/null; then
 					iptables -I INPUT 1 -p tcp --dport 80 -j ACCEPT
 				fi
+
 				docker run --rm -p 80:80 -v /etc/letsencrypt/:/etc/letsencrypt certbot/certbot certonly --standalone -d "$yuming" --email your@email.com --agree-tos --no-eff-email --force-renewal --key-type ecdsa
 			fi
 	  fi
@@ -2867,6 +2904,97 @@ grep -qxF "${app_id}" /home/docker/appno.txt || echo "${app_id}" >> /home/docker
 
 }
 
+edit_app_description() {
+	local docker_name="$1"
+	local desc_file="/home/docker/app_desc/${docker_name}.txt"
+	local tmp_file="/tmp/${docker_name}_desc.tmp"
+	local lock_file="/tmp/${docker_name}_desc.lock"
+	local EDIT_TIMEOUT=300   # 5 分钟
+
+	mkdir -p /home/docker/app_desc
+
+	(
+		# ===== 子 shell 開始，獲取文件鎖 =====
+		exec 9>"$lock_file"
+		if ! flock -n 9; then
+			echo "該應用描述正在被其他會話編輯，請稍後再試"
+			return 1
+		fi
+
+		echo -e "${gl_huang}請輸入${docker_name}的應用描述（最多 10 行，${EDIT_TIMEOUT}秒內未保存將自動退出）${gl_bai}"
+
+		if [ -f "$desc_file" ]; then
+			cp "$desc_file" "$tmp_file"
+		else
+			: > "$tmp_file"
+		fi
+
+		if ! command -v nano >/dev/null 2>&1; then
+			echo "未檢測到 nano，正在安裝..."
+			install nano >/dev/null 2>&1
+		fi
+
+		# ===== 啟動超時看門狗 =====
+		(
+			# ===== 關閉鎖 FD，防止繼承 =====
+			exec 9>&-
+
+			sleep "$EDIT_TIMEOUT"
+			echo "編輯超時，已自動退出"
+			pkill -P $$ nano vi 2>/dev/null
+		) &
+		local watchdog_pid=$!
+
+		# ===== 啟動編輯器 =====
+		if command -v nano >/dev/null 2>&1; then
+			echo "編輯器提示：Ctrl+O 保存，Ctrl+X 退出"
+			sleep 1
+			nano "$tmp_file"
+		else
+			vi "$tmp_file"
+		fi
+
+		# ===== 編輯結束，關閉看門狗 =====
+		kill "$watchdog_pid" 2>/dev/null
+
+		# ===== 原子寫入（10 行限制）=====
+		head -n 10 "$tmp_file" > "$desc_file"
+		rm -f "$tmp_file"
+
+		lines=$(wc -l < "$desc_file")
+		echo "應用描述已保存（${lines}/10 行）"
+		# ===== 釋放鎖（函數退出會自動釋放 FD 9）=====
+	)
+}
+
+show_app_description() {
+	local docker_name="$1"
+	local desc_file="/home/docker/app_desc/${docker_name}.txt"
+	local max_lines=5		# 屏幕最多显示行数
+	local max_total=10		# 描述总行数上限（用于 7/10）
+
+	if [ ! -f "$desc_file" ] || [ ! -s "$desc_file" ]; then
+		return 0
+	fi
+
+	local current_lines
+	current_lines=$(wc -l < "$desc_file")
+
+	# 防止超過上限顯示
+	if [ "$current_lines" -gt "$max_total" ]; then
+		current_lines=$max_total
+	fi
+
+	echo ""
+	echo "【應用描述】${current_lines}/${max_total}"
+	head -n "$max_lines" "$desc_file"
+
+	# 超過 max_lines 僅提示，不輸出 ...
+	if [ "$current_lines" -gt "$max_lines" ]; then
+		echo "（更多內容請進入「應用描述」查看）"
+	fi
+}
+
 
 
 docker_app() {
@@ -2888,12 +3016,17 @@ while true; do
 		local docker_port=$(cat "/home/docker/${docker_name}_port.conf")
 		check_docker_app_ip
 	fi
+	# ===== 應用描述 =====
+	show_app_description "$docker_name"
+	
 	echo ""
 	echo "------------------------"
 	echo "1. 安裝              2. 更新            3. 卸載"
 	echo "------------------------"
 	echo "5. 添加域名訪問      6. 刪除域名訪問"
 	echo "7. 允許IP+端口訪問   8. 阻止IP+端口訪問"
+	echo "------------------------"
+	echo "9. 應用描述"
 	echo "------------------------"
 	echo "0. 返回上一級選單"
 	echo "------------------------"
@@ -2902,9 +3035,18 @@ while true; do
 		1)
 			setup_docker_dir
 			check_disk_space $app_size /home/docker
-			read -e -p "輸入應用對外服務端口，回車默認使用${docker_port}端口:" app_port
-			local app_port=${app_port:-${docker_port}}
-			local docker_port=$app_port
+			while true; do
+				read -e -p "輸入應用對外服務端口，回車默認使用${docker_port}端口:" app_port
+				local app_port=${app_port:-${docker_port}}
+
+				if ss -tuln | grep -q ":$app_port "; then
+					echo -e "${gl_hong}錯誤:${gl_bai}端口$app_port已被佔用，請更換一個端口"
+					send_stats "應用端口已被佔用"
+				else
+					local docker_port=$app_port
+					break
+				fi
+			done
 
 			install jq
 			install_docker
@@ -2969,6 +3111,10 @@ while true; do
 			send_stats "阻止IP訪問${docker_name}"
 			block_container_port "$docker_name" "$ipv4_address"
 			;;
+		9)
+			send_stats "應用描述${docker_name}"
+			edit_app_description "${docker_name}"
+			;;
 
 		*)
 			break
@@ -2978,10 +3124,6 @@ while true; do
 done
 
 }
-
-
-
-
 
 docker_app_plus() {
 	send_stats "$app_name"
@@ -3001,12 +3143,17 @@ docker_app_plus() {
 			local docker_port=$(cat "/home/docker/${docker_name}_port.conf")
 			check_docker_app_ip
 		fi
+		# ===== 應用描述 =====
+		show_app_description "$docker_name"
+
 		echo ""
 		echo "------------------------"
 		echo "1. 安裝             2. 更新             3. 卸載"
 		echo "------------------------"
 		echo "5. 添加域名訪問     6. 刪除域名訪問"
 		echo "7. 允許IP+端口訪問  8. 阻止IP+端口訪問"
+		echo "------------------------"
+		echo "9. 應用描述"
 		echo "------------------------"
 		echo "0. 返回上一級選單"
 		echo "------------------------"
@@ -3015,9 +3162,19 @@ docker_app_plus() {
 			1)
 				setup_docker_dir
 				check_disk_space $app_size /home/docker
-				read -e -p "輸入應用對外服務端口，回車默認使用${docker_port}端口:" app_port
-				local app_port=${app_port:-${docker_port}}
-				local docker_port=$app_port
+				while true; do
+					read -e -p "輸入應用對外服務端口，回車默認使用${docker_port}端口:" app_port
+					local app_port=${app_port:-${docker_port}}
+
+					if ss -tuln | grep -q ":$app_port "; then
+						echo -e "${gl_hong}錯誤:${gl_bai}端口$app_port已被佔用，請更換一個端口"
+						send_stats "應用端口已被佔用"
+					else
+						local docker_port=$app_port
+						break
+					fi
+				done
+
 				install jq
 				install_docker
 				docker_app_install
@@ -3060,6 +3217,10 @@ docker_app_plus() {
 			8)
 				send_stats "阻止IP訪問${docker_name}"
 				block_container_port "$docker_name" "$ipv4_address"
+				;;
+			9)
+				send_stats "應用描述${docker_name}"
+				edit_app_description "${docker_name}"
 				;;
 			*)
 				break
@@ -3436,10 +3597,6 @@ ldnmp_Proxy() {
 	wget -O /home/web/conf.d/map.conf ${gh_proxy}raw.githubusercontent.com/kejilion/nginx/main/map.conf
 	wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}raw.githubusercontent.com/kejilion/nginx/main/reverse-proxy-backend.conf
 
-	install_ssltls
-	certs_status
-
-
 	backend=$(tr -dc 'A-Za-z' < /dev/urandom | head -c 8)
 	sed -i "s/backend_yuming_com/backend_$backend/g" /home/web/conf.d/"$yuming".conf
 
@@ -3454,6 +3611,9 @@ ldnmp_Proxy() {
 
 	sed -i "s/# 動態添加/$upstream_servers/g" /home/web/conf.d/$yuming.conf
 	sed -i '/remote_addr/d' /home/web/conf.d/$yuming.conf
+
+	install_ssltls
+	certs_status
 
 	update_nginx_listen_port "$yuming" "$access_port"
 
@@ -3485,10 +3645,6 @@ ldnmp_Proxy_backend() {
 	wget -O /home/web/conf.d/map.conf ${gh_proxy}raw.githubusercontent.com/kejilion/nginx/main/map.conf
 	wget -O /home/web/conf.d/$yuming.conf ${gh_proxy}raw.githubusercontent.com/kejilion/nginx/main/reverse-proxy-backend.conf
 
-
-	install_ssltls
-	certs_status
-
 	backend=$(tr -dc 'A-Za-z' < /dev/urandom | head -c 8)
 	sed -i "s/backend_yuming_com/backend_$backend/g" /home/web/conf.d/"$yuming".conf
 
@@ -3501,6 +3657,9 @@ ldnmp_Proxy_backend() {
 	done
 
 	sed -i "s/# 動態添加/$upstream_servers/g" /home/web/conf.d/$yuming.conf
+
+	install_ssltls
+	certs_status
 
 	update_nginx_listen_port "$yuming" "$access_port"
 
@@ -9361,7 +9520,7 @@ while true; do
 	  echo -e "${gl_kjlan}109. ${color109}ZFile在線網盤${gl_kjlan}110. ${color110}Karakeep書籤管理"
 	  echo -e "${gl_kjlan}-------------------------"
 	  echo -e "${gl_kjlan}111. ${color111}多格式文件轉換工具${gl_kjlan}112. ${color112}Lucky大內網穿透工具"
-	  echo -e "${gl_kjlan}113. ${color113}Firefox瀏覽器"
+	  echo -e "${gl_kjlan}113. ${color113}Firefox瀏覽器${gl_kjlan}114. ${color114}Xboard節點管理面板"
 	  echo -e "${gl_kjlan}-------------------------"
 	  echo -e "${gl_kjlan}第三方應用列表"
   	  echo -e "${gl_kjlan}想要讓你的應用出現在這裡？查看開發者指南:${gl_huang}https://dev.kejilion.sh/${gl_bai}"
@@ -13024,6 +13183,51 @@ discourse,yunsou,ahhhhfs,nsgame,gying" \
 
 		  ;;
 
+		114|xboard)
+			local app_id="114"
+			local app_name="xboard節點管理面板"
+			local app_text="是一個基於 Laravel 11 構建的現代化節點面板系統，專注於提供簡潔高效的用戶體驗。"
+			local app_url="官方網站: https://github.com/cedar2025/Xboard"
+			local docker_name="xboard"
+			local docker_port="8114"
+			local app_size="2"
+
+			docker_app_install() {
+				install git
+
+				mkdir -p /home/docker/xboard
+				cd /home/docker/xboard
+
+				git clone -b compose --depth 1 https://github.com/cedar2025/Xboard .
+
+				sed -i "s/7001:7001/${docker_port}:7001/g" /home/docker/xboard/compose.yaml
+				sed -i 's|\./|/home/docker/xboard/|g' /home/docker/xboard/compose.yaml
+				cd /home/docker/xboard/
+				docker compose run -it --rm web php artisan xboard:install
+				docker compose up -d
+				clear
+				echo "已經安裝完成"
+				check_docker_app_ip
+			}
+
+
+			docker_app_update() {
+				cd /home/docker/xboard/ && docker compose pull
+				cd /home/docker/xboard/ && docker compose run -it --rm web php artisan xboard:update
+				cd /home/docker/xboard/ && docker compose up -d
+			}
+
+
+			docker_app_uninstall() {
+				cd /home/docker/xboard/ && docker compose down --rmi all
+				rm -rf /home/docker/xboard
+				echo "應用已卸載"
+			}
+
+			docker_app_plus
+
+		  	;;
+
 
 	  b)
 	  	clear
@@ -14993,13 +15197,13 @@ echo -e "${gl_lan}GNAME 8.8刀首年COM域名 6.68刀首年CC域名${gl_bai}"
 echo -e "${gl_bai}網址: https://www.gname.com/register?tt=86836&ttcode=KEJILION86836&ttbj=sh${gl_bai}"
 echo "------------------------"
 echo ""
-echo -e "科技lion周邊"
+echo -e "GL科技周邊"
 echo "------------------------"
 echo -e "${gl_kjlan}B站:${gl_bai}https://b23.tv/2mqnQyh              ${gl_kjlan}油管:${gl_bai}https://www.youtube.com/@kejilion${gl_bai}"
 echo -e "${gl_kjlan}官網:${gl_bai}https://kejilion.pro/              ${gl_kjlan}導航:${gl_bai}https://dh.kejilion.pro/${gl_bai}"
 echo -e "${gl_kjlan}部落格:${gl_bai}https://blog.kejilion.pro/         ${gl_kjlan}軟件中心:${gl_bai}https://app.kejilion.pro/${gl_bai}"
 echo "------------------------"
-echo -e "${gl_kjlan}腳本官網:${gl_bai}https://kejilion.sh            ${gl_kjlan}GitHub地址:${gl_bai}https://github.com/kejilion/sh${gl_bai}"
+echo -e "${gl_kjlan}腳本官網:${gl_bai}https://kejilion.sh            ${gl_kjlan}GitHub地址:${gl_bai}https://github.com/GLTechnologies/sh${gl_bai}"
 echo "------------------------"
 echo ""
 }
@@ -15074,11 +15278,11 @@ while true; do
 	clear
 	echo "更新日誌"
 	echo "------------------------"
-	echo "全部日誌:${gh_proxy}raw.githubusercontent.com/kejilion/sh/main/kejilion_sh_log.txt"
+	echo "全部日誌:${gh_proxy}raw.githubusercontent.com/GLTechnologies/sh/main/kejilion_sh_log.txt"
 	echo "------------------------"
 
-	curl -s ${gh_proxy}raw.githubusercontent.com/kejilion/sh/main/kejilion_sh_log.txt | tail -n 30
-	local sh_v_new=$(curl -s ${gh_proxy}raw.githubusercontent.com/kejilion/sh/main/kejilion.sh | grep -o 'sh_v="[0-9.]*"' | cut -d '"' -f 2)
+	curl -s ${gh_proxy}raw.githubusercontent.com/GLTechnologies/sh/main/kejilion_sh_log.txt | tail -n 30
+	local sh_v_new=$(curl -s ${gh_proxy}raw.githubusercontent.com/GLTechnologies/sh/main/kejilion.sh | grep -o 'sh_v="[0-9.]*"' | cut -d '"' -f 2)
 
 	if [ "$sh_v" = "$sh_v_new" ]; then
 		echo -e "${gl_lv}你已經是最新版本！${gl_huang}v$sh_v${gl_bai}"
@@ -15108,9 +15312,9 @@ while true; do
 			clear
 			local country=$(curl -s ipinfo.io/country)
 			if [ "$country" = "CN" ]; then
-				curl -sS -O ${gh_proxy}raw.githubusercontent.com/kejilion/sh/main/cn/kejilion.sh && chmod +x kejilion.sh
+				curl -sS -O ${gh_proxy}raw.githubusercontent.com/GLTechnologies/sh/main/cn/kejilion.sh && chmod +x kejilion.sh
 			else
-				curl -sS -O ${gh_proxy}raw.githubusercontent.com/kejilion/sh/main/kejilion.sh && chmod +x kejilion.sh
+				curl -sS -O ${gh_proxy}raw.githubusercontent.com/GLTechnologies/sh/main/kejilion.sh && chmod +x kejilion.sh
 			fi
 			canshu_v6
 			CheckFirstRun_true
@@ -15127,11 +15331,11 @@ while true; do
 			local country=$(curl -s ipinfo.io/country)
 			local ipv6_address=$(curl -s --max-time 1 ipv6.ip.sb)
 			if [ "$country" = "CN" ]; then
-				SH_Update_task="curl -sS -O https://gh.kejilion.pro/raw.githubusercontent.com/kejilion/sh/main/kejilion.sh && chmod +x kejilion.sh && sed -i 's/canshu=\"default\"/canshu=\"CN\"/g' ./kejilion.sh"
+				SH_Update_task="curl -sS -O https://gh.kejilion.pro/raw.githubusercontent.com/GLTechnologies/sh/main/kejilion.sh && chmod +x kejilion.sh && sed -i 's/canshu=\"default\"/canshu=\"CN\"/g' ./kejilion.sh"
 			elif [ -n "$ipv6_address" ]; then
-				SH_Update_task="curl -sS -O https://gh.kejilion.pro/raw.githubusercontent.com/kejilion/sh/main/kejilion.sh && chmod +x kejilion.sh && sed -i 's/canshu=\"default\"/canshu=\"V6\"/g' ./kejilion.sh"
+				SH_Update_task="curl -sS -O https://gh.kejilion.pro/raw.githubusercontent.com/GLTechnologies/sh/main/kejilion.sh && chmod +x kejilion.sh && sed -i 's/canshu=\"default\"/canshu=\"V6\"/g' ./kejilion.sh"
 			else
-				SH_Update_task="curl -sS -O https://raw.githubusercontent.com/kejilion/sh/main/kejilion.sh && chmod +x kejilion.sh"
+				SH_Update_task="curl -sS -O https://raw.githubusercontent.com/GLTechnologies/sh/main/kejilion.sh && chmod +x kejilion.sh"
 			fi
 			check_crontab_installed
 			(crontab -l | grep -v "kejilion.sh") | crontab -
@@ -15167,7 +15371,7 @@ echo -e "${gl_kjlan}"
 echo "╦╔═╔═╗ ╦╦╦  ╦╔═╗╔╗╔ ╔═╗╦ ╦"
 echo "╠╩╗║╣  ║║║  ║║ ║║║║ ╚═╗╠═╣"
 echo "╩ ╩╚═╝╚╝╩╩═╝╩╚═╝╝╚╝o╚═╝╩ ╩"
-echo -e "科技lion腳本工具箱 v$sh_v"
+echo -e "GL科技腳本工具箱 v$sh_v"
 echo -e "命令行輸入${gl_huang}k${gl_kjlan}可快速啟動腳本${gl_bai}"
 echo -e "${gl_kjlan}------------------------${gl_bai}"
 echo -e "${gl_kjlan}1.   ${gl_bai}系統信息查詢"
