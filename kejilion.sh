@@ -13266,7 +13266,7 @@ discourse,yunsou,ahhhhfs,nsgame,gying" \
 
 
 			docker_app_update() {
-				
+				cd /home/docker/btcpay/ && docker compose down --rmi all
 			}
 
 
