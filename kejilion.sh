@@ -13239,6 +13239,8 @@ discourse,yunsou,ahhhhfs,nsgame,gying" \
 			local app_size="4"
 
 			docker_app_install() {
+				local app_domain
+				read -e -p "输入应用解析后的域名(example.com): " app_domain
 				install git
 
 				mkdir -p /home/docker/btcpay
@@ -13248,7 +13250,7 @@ discourse,yunsou,ahhhhfs,nsgame,gying" \
 				cd /home/docker/btcpay/btcpayserver-docker
 
 				# Run btcpay-setup.sh with the right parameters
-				export BTCPAY_HOST="technologyai.top"
+				export BTCPAY_HOST=${app_domain}
 				export NBITCOIN_NETWORK="mainnet"
 				export BTCPAYGEN_CRYPTO1="btc"
 				export BTCPAYGEN_ADDITIONAL_FRAGMENTS="opt-save-storage-s"
