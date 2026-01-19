@@ -13266,7 +13266,9 @@ discourse,yunsou,ahhhhfs,nsgame,gying" \
 
 
 			docker_app_update() {
-				cd /home/docker/btcpay/ && docker compose down --rmi all
+				cd /home/docker/xboard/ && docker compose pull
+				cd /home/docker/xboard/ && docker compose run -it --rm web php artisan xboard:update
+				cd /home/docker/xboard/ && docker compose up -d
 			}
 
 
