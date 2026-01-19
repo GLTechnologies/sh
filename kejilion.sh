@@ -13258,6 +13258,7 @@ discourse,yunsou,ahhhhfs,nsgame,gying" \
 				export BTCPAYGEN_REVERSEPROXY="nginx"
 				export BTCPAYGEN_LIGHTNING="clightning"
 				export BTCPAY_ENABLE_SSH=true
+				export REVERSEPROXY_HTTPS_PORT=${docker_port}
 
 				. ./btcpay-setup.sh -i
 				clear
