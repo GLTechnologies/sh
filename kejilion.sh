@@ -9521,6 +9521,7 @@ while true; do
 	  echo -e "${gl_kjlan}-------------------------"
 	  echo -e "${gl_kjlan}111. ${color111}多格式文件转换工具                  ${gl_kjlan}112. ${color112}Lucky大内网穿透工具"
 	  echo -e "${gl_kjlan}113. ${color113}Firefox浏览器                       ${gl_kjlan}114. ${color114}Xboard节点管理面板"
+	  echo -e "${gl_kjlan}115. ${color115}BTCPay虚拟货币支付平台"
 	  echo -e "${gl_kjlan}-------------------------"
 	  echo -e "${gl_kjlan}第三方应用列表"
   	  echo -e "${gl_kjlan}想要让你的应用出现在这里？查看开发者指南: ${gl_huang}https://dev.kejilion.sh/${gl_bai}"
@@ -13221,6 +13222,55 @@ discourse,yunsou,ahhhhfs,nsgame,gying" \
 			docker_app_uninstall() {
 				cd /home/docker/xboard/ && docker compose down --rmi all
 				rm -rf /home/docker/xboard
+				echo "应用已卸载"
+			}
+
+			docker_app_plus
+
+		  	;;
+
+		115|BTCPay)
+			local app_id="115"
+			local app_name="BTCPay支付平台"
+			local app_text="是一个自托管、开源比特币支付处理器。"
+			local app_url="官方网站: https://github.com/btcpayserver/btcpayserver-docker"
+			local docker_name="btcpay"
+			local docker_port="8115"
+			local app_size="4"
+
+			docker_app_install() {
+				install git
+
+				mkdir -p /home/docker/btcpay
+				cd /home/docker/btcpay
+
+				git clone https://github.com/btcpayserver/btcpayserver-docker
+				cd /home/docker/btcpay/btcpayserver-docker
+
+				# Run btcpay-setup.sh with the right parameters
+				export BTCPAY_HOST="technologyai.top"
+				export NBITCOIN_NETWORK="mainnet"
+				export BTCPAYGEN_CRYPTO1="btc"
+				export BTCPAYGEN_ADDITIONAL_FRAGMENTS="opt-save-storage-s"
+				export BTCPAYGEN_REVERSEPROXY="nginx"
+				export BTCPAYGEN_LIGHTNING="clightning"
+				export BTCPAY_ENABLE_SSH=true
+
+				. ./btcpay-setup.sh -i
+				clear
+				echo "已经安装完成"
+				check_docker_app_ip
+			}
+
+
+			docker_app_update() {
+				
+			}
+
+
+			docker_app_uninstall() {
+				cd /home/docker/btcpay/ && docker compose down --rmi all
+				rm -rf /home/docker/btcpay
 				echo "应用已卸载"
 			}
 
