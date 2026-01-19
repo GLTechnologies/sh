@@ -13237,9 +13237,10 @@ discourse,yunsou,ahhhhfs,nsgame,gying" \
 			local docker_name="btcpay"
 			local docker_port="8115"
 			local app_size="4"
+			local app_domain
 
 			docker_app_install() {
-				local app_domain
+				
 				read -e -p "输入应用解析后的域名(example.com): " app_domain
 				install git
 
