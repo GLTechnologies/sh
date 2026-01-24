@@ -15097,7 +15097,12 @@ cert_manage() {
 
 
 		case $sub_choice in
-			1) install certbot python3-certbot-nginx -y;;
+			1) 
+				read -p "请输入解析后的域名（exmple.com）: " domain
+				install certbot python3-certbot-nginx -y
+				echo "${domain}"
+				#certbot --nginx -d ${domain}
+				;;
 			*) break ;;
 		esac
 	done
