@@ -15097,7 +15097,7 @@ cert_manage() {
 
 
 		case $sub_choice in
-			1) apt update && install certbot python3-certbot-nginx -y;;
+			1) install certbot python3-certbot-nginx -y;;
 			*) break ;;
 		esac
 	done
