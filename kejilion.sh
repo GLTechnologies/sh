@@ -15061,7 +15061,26 @@ EOF
 	done
 }
 
-
+linux_service() {
+	while true; do
+		clear
+		echo -e "服务管理"
+		echo -e "${gl_kjlan}------------------------"
+		#echo -e "${gl_kjlan}1.   ${gl_bai}证书管理                 ${gl_kjlan}2.   ${gl_bai}MySQL安装"
+		echo -e "${gl_kjlan}1.   ${gl_bai}证书管理"
+		echo -e "${gl_kjlan}------------------------"
+		echo "0.  返回上一级选单"
+		echo -e "${gl_kjlan}------------------------"
+		read -e -p "请输入你的选择: " sub_choice
+		case $sub_choice in
+			1)
+				;;
+			*)
+				kejilion
+				;;
+		esac
+	done
+}
 
 
 
@@ -15100,7 +15119,6 @@ run_commands_on_servers() {
 	break_end
 
 }
-
 
 linux_cluster() {
 mkdir cluster
@@ -15470,7 +15488,7 @@ case $choice in
   11) linux_panel ;;
   12) linux_work ;;
   13) linux_Settings ;;
-  14) linux_cluster ;;
+  14) linux_service ;;
   15) linux_cluster ;;
   16) kejilion_Affiliates ;;
   17) games_server_tools ;;
