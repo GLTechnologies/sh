@@ -15089,12 +15089,11 @@ cert_manage() {
 		clear
 		echo "证书管理"
 		echo "------------------------"
-		echo "1.  申请Let's Encrypt"
+		echo "1. 申请Let's Encrypt          2. 更新证书"
 		echo "------------------------"
 		echo "0. 返回上一级选单"
 		echo "------------------------"
 		read -e -p "请输入你的选择: " sub_choice
-
 
 		case $sub_choice in
 			1) 
@@ -15102,6 +15101,8 @@ cert_manage() {
 				install certbot python3-certbot-nginx -y
 				echo "${domain}"
 				#certbot --nginx -d ${domain}
+				;;
+			2)
 				;;
 			*) break ;;
 		esac
