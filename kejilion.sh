@@ -15074,6 +15074,7 @@ linux_service() {
 		read -e -p "请输入你的选择: " sub_choice
 		case $sub_choice in
 			1)
+				cert_manage
 				;;
 			*)
 				kejilion
@@ -15082,7 +15083,25 @@ linux_service() {
 	done
 }
 
+cert_manage() {
+	root_use
+	while true; do
+		clear
+		echo "证书管理"
+		echo "------------------------"
+		echo "1.  申请Let's Encrypt"
+		echo "------------------------"
+		echo "0. 返回上一级选单"
+		echo "------------------------"
+		read -e -p "请输入你的选择: " sub_choice
 
+
+		case $sub_choice in
+			1) apt update;;
+			*) break ;;
+		esac
+	done
+}
 
 
 cluster_python3() {
