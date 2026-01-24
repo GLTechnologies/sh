@@ -15089,7 +15089,9 @@ cert_manage() {
 		clear
 		echo "证书管理"
 		echo "------------------------"
-		echo "1. 申请Let's Encrypt          2. 更新证书"
+		echo "1. 申请Let's Encrypt          2. 删除Let's Encrypt"
+		echo "3. 自动更新证书                4. 手动更新证书"
+		echo "5. 查看证书有效期"
 		echo "------------------------"
 		echo "0. 返回上一级选单"
 		echo "------------------------"
@@ -15103,6 +15105,14 @@ cert_manage() {
 				#certbot --nginx -d ${domain}
 				;;
 			2)
+				;;
+			3)
+				echo "正在更新 Let's Encrypt 证书..."
+    			certbot renew --quiet --deploy-hook "nginx -s reload"
+				;;
+			4)
+				;;
+			5)
 				;;
 			*) break ;;
 		esac
