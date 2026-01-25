@@ -15126,11 +15126,20 @@ cert_manage() {
 					continue
                 fi
 
-				# 准备 SSL 目录（存在则不处理）
-                mkdir -p /etc/nginx/ssl
-                echo "✅ SSL 目录就绪：/etc/nginx/ssl"
+				# 创建目录
+				default_dir="/etc/nginx/ssl"
+				read -e -p "请输入要创建的目录名 [默认: $default_dir]: " dirname
+				dirname=${dirname:-$default_dir}
+				mkdir -p "$dirname" && echo "目录已创建：$dirname" || echo "创建失败"
+
+				cd "$dirname" 2>/dev/null || echo "无法进入目录"
 				echo "📂 当前已有证书列表："
-				ls /etc/nginx/ssl/
+				ls "$dirname"
+
+				read -e -p "请输入要编辑的文件名: " filename
+				install nano
+				nano "$filename"
+
 				break_end
 				;;
 			5)
