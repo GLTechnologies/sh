@@ -15084,6 +15084,7 @@ linux_service() {
 
 cert_manage() {
 	root_use
+	install nginx
 	while true; do
 		clear
 		echo -e "证书管理"
@@ -15106,18 +15107,50 @@ cert_manage() {
 				break_end
 				;;
 			2)
+				echo "删除证书功能暂未实现"
+                break_end
 				;;
 			3)
 				echo "正在更新 Let's Encrypt 证书..."
     			certbot renew --quiet --deploy-hook "nginx -s reload"
+				echo "证书更新完成"
 				break_end
 				;;
 			4)
+				echo "手动更新证书"
 
+                # 判断 nginx 目录是否存在
+                if [ ! -d "/etc/nginx" ]; then
+                    echo "❌ 未检测到 /etc/nginx，请先安装 Nginx"
+                    break_end
+					continue
+                fi
+
+				# 准备 SSL 目录（存在则不处理）
+                mkdir -p /etc/nginx/ssl
+                echo "✅ SSL 目录就绪：/etc/nginx/ssl"
+				echo "📂 当前已有证书列表："
+				ls /etc/nginx/ssl/
+				break_end
 				;;
 			5)
+				echo "查看证书有效期"
+
+                if command -v certbot >/dev/null 2>&1; then
+                    certbot certificates
+                else
+                    echo "❌ 未安装 certbot"
+                fi
+
+                break_end
 				;;
-			*) break ;;
+			0)
+                break
+                ;;
+            *)
+                echo "无效选择，请重新输入"
+                break_end
+                ;;
 		esac
 	done
 }
