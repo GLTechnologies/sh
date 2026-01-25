@@ -15065,12 +15065,11 @@ linux_service() {
 	while true; do
 		clear
 		echo -e "服务管理"
-		echo -e "${gl_kjlan}------------------------"
-		#echo -e "${gl_kjlan}1.   ${gl_bai}证书管理                 ${gl_kjlan}2.   ${gl_bai}MySQL安装"
-		echo -e "${gl_kjlan}1.   ${gl_bai}证书管理"
-		echo -e "${gl_kjlan}------------------------"
-		echo "0.  返回上一级选单"
-		echo -e "${gl_kjlan}------------------------"
+		echo -e "${gl_kjlan}------------------------${gl_bai}"
+		echo -e "${gl_kjlan}1.  ${gl_bai}证书管理"
+		echo -e "${gl_kjlan}------------------------${gl_bai}"
+		echo -e "${gl_kjlan}0.  ${gl_bai}返回上一级选单"
+		echo -e "${gl_kjlan}------------------------${gl_bai}"
 		read -e -p "请输入你的选择: " sub_choice
 		case $sub_choice in
 			1)
@@ -15087,14 +15086,15 @@ cert_manage() {
 	root_use
 	while true; do
 		clear
-		echo "证书管理"
-		echo "------------------------"
-		echo "1. 申请Let's Encrypt          2. 删除Let's Encrypt"
-		echo "3. 自动更新证书                4. 手动更新证书"
-		echo "5. 查看证书有效期"
-		echo "------------------------"
-		echo "0. 返回上一级选单"
-		echo "------------------------"
+		echo -e "证书管理"
+		echo -e "${gl_kjlan}------------------------${gl_bai}"
+		echo -e "${gl_kjlan}Let's Encrypt${gl_bai}"
+		echo -e "${gl_kjlan}1. ${gl_bai}申请证书                    ${gl_kjlan}2. ${gl_bai}删除证书"
+		echo -e "${gl_kjlan}3. ${gl_bai}自动更新证书                ${gl_kjlan}4. ${gl_bai}手动更新证书"
+		echo -e "${gl_kjlan}5. ${gl_bai}查看证书有效期"
+		echo -e "${gl_kjlan}------------------------${gl_bai}"
+		echo -e "${gl_kjlan}0. ${gl_bai}返回上一级选单"
+		echo -e "${gl_kjlan}------------------------${gl_bai}"
 		read -e -p "请输入你的选择: " sub_choice
 
 		case $sub_choice in
@@ -15103,14 +15103,17 @@ cert_manage() {
 				install certbot python3-certbot-nginx -y
 				echo "${domain}"
 				#certbot --nginx -d ${domain}
+				break_end
 				;;
 			2)
 				;;
 			3)
 				echo "正在更新 Let's Encrypt 证书..."
     			certbot renew --quiet --deploy-hook "nginx -s reload"
+				break_end
 				;;
 			4)
+
 				;;
 			5)
 				;;
