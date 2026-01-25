@@ -195,7 +195,7 @@ public_ip=$(get_public_ip)
 isp_info=$(curl -s --max-time 3 http://ipinfo.io/org)
 
 
-if echo "$isp_info" | grep -Eiq 'mobile|unicom|telecom'; then
+if echo "$isp_info" | grep -Eiq 'CHINANET|mobile|unicom|telecom'; then
   ipv4_address=$(get_local_ip)
 else
   ipv4_address="$public_ip"
@@ -2371,7 +2371,7 @@ check_nginx_compression() {
 
 	# Check whether zstd is on and uncommented (the whole line starts with zstd on;)
 	if grep -qE '^\s*zstd\s+on;' "$CONFIG_FILE"; then
-		zstd_status="zstd compression is on"
+		zstd_status="zstd compression is enabled"
 	else
 		zstd_status=""
 	fi
@@ -5022,7 +5022,7 @@ add_sshkey() {
 		   -e 's/^\s*#\?\s*ChallengeResponseAuthentication .*/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config
 	rm -rf /etc/ssh/sshd_config.d/* /etc/ssh/ssh_config.d/*
 	restart_ssh
-	echo -e "${gl_lv}ROOT private key login has been turned on, ROOT password login has been turned off, reconnection will take effect${gl_bai}"
+	echo -e "${gl_lv}ROOT private key login has been turned on, ROOT password login has been turned off, and reconnection will take effect.${gl_bai}"
 
 }
 
@@ -5072,7 +5072,7 @@ echo -e "${gl_lv}ROOT login setup is completed!${gl_bai}"
 
 root_use() {
 clear
-[ "$EUID" -ne 0 ] && echo -e "${gl_huang}hint:${gl_bai}This feature requires root user to run!" && break_end && kejilion
+[ "$EUID" -ne 0 ] && echo -e "${gl_huang}hint:${gl_bai}This function requires root user to run!" && break_end && kejilion
 }
 
 
@@ -5956,7 +5956,7 @@ Kernel_optimize() {
 			  cd ~
 			  clear
 			  optimize_web_server
-			  send_stats "Website optimization model"
+			  send_stats "Website optimization mode"
 			  ;;
 		  4)
 			  cd ~
@@ -6219,9 +6219,9 @@ send_stats "Command Favorites"
 bash <(curl -l -s ${gh_proxy}raw.githubusercontent.com/byJoey/cmdbox/refs/heads/main/install.sh)
 }
 
-# Create a backup
+# Create backup
 create_backup() {
-	send_stats "Create a backup"
+	send_stats "Create backup"
 	local TIMESTAMP=$(date +"%Y%m%d%H%M%S")
 
 	# Prompt user for backup directory
@@ -6263,7 +6263,7 @@ create_backup() {
 		echo "- $path"
 	done
 
-	# Create a backup
+	# Create backup
 	echo "Creating backup$BACKUP_NAME..."
 	install tar
 	tar -czvf "$BACKUP_DIR/$BACKUP_NAME" "${BACKUP_PATHS[@]}"
@@ -6684,7 +6684,7 @@ disk_manager() {
 	send_stats "Hard disk management function"
 	while true; do
 		clear
-		echo "Hard drive partition management"
+		echo "Hard disk partition management"
 		echo -e "${gl_huang}This feature is under internal testing and should not be used in a production environment.${gl_bai}"
 		echo "------------------------"
 		list_partitions
@@ -9521,6 +9521,7 @@ while true; do
 	  echo -e "${gl_kjlan}-------------------------"
 	  echo -e "${gl_kjlan}111. ${color111}Multi-format file conversion tool${gl_kjlan}112. ${color112}Lucky large intranet penetration tool"
 	  echo -e "${gl_kjlan}113. ${color113}Firefox browser${gl_kjlan}114. ${color114}Xboard node management panel"
+	  echo -e "${gl_kjlan}115. ${color115}BTCPay virtual currency payment platform"
 	  echo -e "${gl_kjlan}-------------------------"
 	  echo -e "${gl_kjlan}Third-party application list"
   	  echo -e "${gl_kjlan}Want your app to appear here? Check out the developer guide:${gl_huang}https://dev.kejilion.sh/${gl_bai}"
@@ -13228,6 +13229,61 @@ discourse,yunsou,ahhhhfs,nsgame,gying" \
 
 		  	;;
 
+		115|BTCPay)
+			local app_id="115"
+			local app_name="BTCPay payment platform"
+			local app_text="is a self-hosted, open source Bitcoin payment processor."
+			local app_url="Official website: https://github.com/btcpayserver/btcpayserver-docker"
+			local docker_name="btcpay"
+			local docker_port="8115"
+			local app_size="4"
+			local app_domain
+
+			docker_app_install() {
+				
+				read -e -p "Enter the domain name resolved by the application (example.com):" app_domain
+				install git
+
+				mkdir -p /home/docker/btcpay
+				cd /home/docker/btcpay
+
+				git clone https://github.com/btcpayserver/btcpayserver-docker
+				cd /home/docker/btcpay/btcpayserver-docker
+
+				# Run btcpay-setup.sh with the right parameters
+				export BTCPAY_HOST=${app_domain}
+				export NBITCOIN_NETWORK="mainnet"
+				export BTCPAYGEN_CRYPTO1="btc"
+				export BTCPAYGEN_ADDITIONAL_FRAGMENTS="opt-save-storage-s"
+				export BTCPAYGEN_REVERSEPROXY="nginx"
+				export BTCPAYGEN_LIGHTNING="clightning"
+				export BTCPAY_ENABLE_SSH=true
+				export REVERSEPROXY_HTTPS_PORT=${docker_port}
+
+				. ./btcpay-setup.sh -i
+				clear
+				echo "Installation completed"
+				check_docker_app_ip
+			}
+
+
+			docker_app_update() {
+				cd /home/docker/xboard/ && docker compose pull
+				cd /home/docker/xboard/ && docker compose run -it --rm web php artisan xboard:update
+				cd /home/docker/xboard/ && docker compose up -d
+			}
+
+
+			docker_app_uninstall() {
+				cd /home/docker/btcpay/ && docker compose down --rmi all
+				rm -rf /home/docker/btcpay
+				echo "App has been uninstalled"
+			}
+
+			docker_app_plus
+
+		  	;;
+
 
 	  b)
 	  	clear
@@ -13877,8 +13933,8 @@ EOF
 						;;
 					2)
 						rm -f /etc/gai.conf
-						echo "Switched to IPv6 first"
-						send_stats "Switched to IPv6 first"
+						echo "Switched to IPv6 priority"
+						send_stats "Switched to IPv6 priority"
 						;;
 
 					3)
@@ -14625,7 +14681,7 @@ EOF
 			  echo -e "7. Turn on${gl_huang}BBR${gl_bai}accelerate"
 			  echo -e "8. Set time zone to${gl_huang}Shanghai${gl_bai}"
 			  echo -e "9. Automatically optimize DNS addresses${gl_huang}Overseas: 1.1.1.1 8.8.8.8 Domestic: 223.5.5.5${gl_bai}"
-		  	  echo -e "10. Set the network to${gl_huang}ipv4 priority${gl_bai}"
+		  	  echo -e "10. Set the network to${gl_huang}IPv4 priority${gl_bai}"
 			  echo -e "11. Install basic tools${gl_huang}docker wget sudo tar unzip socat btop nano vim${gl_bai}"
 			  echo -e "12. Linux system kernel parameter optimization switches to${gl_huang}Balanced optimization mode${gl_bai}"
 			  echo "------------------------------------------------"
@@ -14674,7 +14730,7 @@ EOF
 				  echo -e "[${gl_lv}OK${gl_bai}] 9/12. Automatically optimize DNS address${gl_huang}${gl_bai}"
 				  echo "------------------------------------------------"
 				  prefer_ipv4
-				  echo -e "[${gl_lv}OK${gl_bai}] 10/12. Set the network to${gl_huang}ipv4 priority${gl_bai}}"
+				  echo -e "[${gl_lv}OK${gl_bai}] 10/12. Set the network to${gl_huang}IPv4 priority${gl_bai}}"
 
 				  echo "------------------------------------------------"
 				  install_docker
@@ -15005,9 +15061,108 @@ EOF
 	done
 }
 
+linux_service() {
+	while true; do
+		clear
+		echo -e "Service management"
+		echo -e "${gl_kjlan}------------------------${gl_bai}"
+		echo -e "${gl_kjlan}1.  ${gl_bai}Certificate management"
+		echo -e "${gl_kjlan}------------------------${gl_bai}"
+		echo -e "${gl_kjlan}0.  ${gl_bai}Return to the previous menu"
+		echo -e "${gl_kjlan}------------------------${gl_bai}"
+		read -e -p "Please enter your choice:" sub_choice
+		case $sub_choice in
+			1)
+				cert_manage
+				;;
+			*)
+				kejilion
+				;;
+		esac
+	done
+}
 
+cert_manage() {
+	root_use
+	install nginx
+	while true; do
+		clear
+		echo -e "Certificate management"
+		echo -e "${gl_kjlan}------------------------${gl_bai}"
+		echo -e "${gl_kjlan}Let's Encrypt${gl_bai}"
+		echo -e "${gl_kjlan}1. ${gl_bai}Apply for a certificate${gl_kjlan}2. ${gl_bai}Delete certificate"
+		echo -e "${gl_kjlan}3. ${gl_bai}Automatically renew certificates${gl_kjlan}4. ${gl_bai}Update certificate manually"
+		echo -e "${gl_kjlan}5. ${gl_bai}Check the certificate validity period"
+		echo -e "${gl_kjlan}------------------------${gl_bai}"
+		echo -e "${gl_kjlan}0. ${gl_bai}Return to the previous menu"
+		echo -e "${gl_kjlan}------------------------${gl_bai}"
+		read -e -p "Please enter your choice:" sub_choice
 
+		case $sub_choice in
+			1) 
+				read -p "Please enter the resolved domain name (exmple.com):" domain
+				install certbot python3-certbot-nginx -y
+				echo "${domain}"
+				#certbot --nginx -d ${domain}
+				break_end
+				;;
+			2)
+				echo "The function of deleting certificates has not yet been implemented"
+                break_end
+				;;
+			3)
+				echo "Updating Let's Encrypt certificate..."
+    			certbot renew --quiet --deploy-hook "nginx -s reload"
+				echo "Certificate update completed"
+				break_end
+				;;
+			4)
+				echo "Update certificate manually"
 
+                # Determine whether the nginx directory exists
+                if [ ! -d "/etc/nginx" ]; then
+                    echo "❌ /etc/nginx is not detected, please install Nginx first"
+                    break_end
+					continue
+                fi
+
+				# Create directory
+				default_dir="/etc/nginx/ssl"
+				read -e -p "Please enter the directory name to be created [Default:$default_dir]: " dirname
+				dirname=${dirname:-$default_dir}
+				mkdir -p "$dirname" && echo "Directory created:$dirname" || echo "Creation failed"
+
+				cd "$dirname" 2>/dev/null || echo "Unable to enter directory"
+				echo "📂 Currently there is a list of certificates:"
+				ls "$dirname"
+
+				read -e -p "Please enter the file name to be edited:" filename
+				install nano
+				nano "$filename"
+
+				break_end
+				;;
+			5)
+				echo "Check the certificate validity period"
+
+                if command -v certbot >/dev/null 2>&1; then
+                    certbot certificates
+                else
+                    echo "❌ certbot is not installed"
+                fi
+
+                break_end
+				;;
+			0)
+                break
+                ;;
+            *)
+                echo "Invalid selection, please re-enter"
+                break_end
+                ;;
+		esac
+	done
+}
 
 
 cluster_python3() {
@@ -15036,7 +15191,7 @@ run_commands_on_servers() {
 		local username=${SERVER_ARRAY[i+3]}
 		local password=${SERVER_ARRAY[i+4]}
 		echo
-		echo -e "${gl_huang}connect to$name ($hostname)...${gl_bai}"
+		echo -e "${gl_huang}Connect to$name ($hostname)...${gl_bai}"
 		# sshpass -p "$password" ssh -o StrictHostKeyChecking=no "$username@$hostname" -p "$port" "$1"
 		sshpass -p "$password" ssh -t -o StrictHostKeyChecking=no "$username@$hostname" -p "$port" "$1"
 	done
@@ -15044,7 +15199,6 @@ run_commands_on_servers() {
 	break_end
 
 }
-
 
 linux_cluster() {
 mkdir cluster
@@ -15387,9 +15541,10 @@ echo -e "${gl_huang}10.  ${gl_bai}LDNMP website building"
 echo -e "${gl_kjlan}11.  ${gl_bai}application market"
 echo -e "${gl_kjlan}12.  ${gl_bai}Backend workspace"
 echo -e "${gl_kjlan}13.  ${gl_bai}system tools"
-echo -e "${gl_kjlan}14.  ${gl_bai}Server cluster control"
-echo -e "${gl_kjlan}15.  ${gl_bai}Advertising column"
-echo -e "${gl_kjlan}16.  ${gl_bai}Collection of game server opening scripts"
+echo -e "${gl_kjlan}14.  ${gl_bai}Service management"
+echo -e "${gl_kjlan}15.  ${gl_bai}Server cluster control"
+echo -e "${gl_kjlan}16.  ${gl_bai}Advertising column"
+echo -e "${gl_kjlan}17.  ${gl_bai}Collection of game server opening scripts"
 echo -e "${gl_kjlan}------------------------${gl_bai}"
 echo -e "${gl_kjlan}00.  ${gl_bai}Script update"
 echo -e "${gl_kjlan}------------------------${gl_bai}"
@@ -15413,9 +15568,10 @@ case $choice in
   11) linux_panel ;;
   12) linux_work ;;
   13) linux_Settings ;;
-  14) linux_cluster ;;
-  15) kejilion_Affiliates ;;
-  16) games_server_tools ;;
+  14) linux_service ;;
+  15) linux_cluster ;;
+  16) kejilion_Affiliates ;;
+  17) games_server_tools ;;
   00) kejilion_update ;;
   0) clear ; exit ;;
   *) echo "Invalid input!" ;;
@@ -15426,7 +15582,7 @@ done
 
 
 k_info() {
-send_stats "k command reference examples"
+send_stats "k command reference use case"
 echo "-------------------"
 echo "Video introduction: https://www.bilibili.com/video/BV1ib421E7it?t=0.1"
 echo "The following is a reference use case for the k command:"

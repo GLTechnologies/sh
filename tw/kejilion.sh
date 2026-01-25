@@ -195,7 +195,7 @@ public_ip=$(get_public_ip)
 isp_info=$(curl -s --max-time 3 http://ipinfo.io/org)
 
 
-if echo "$isp_info" | grep -Eiq 'mobile|unicom|telecom'; then
+if echo "$isp_info" | grep -Eiq 'CHINANET|mobile|unicom|telecom'; then
   ipv4_address=$(get_local_ip)
 else
   ipv4_address="$public_ip"
@@ -9521,6 +9521,7 @@ while true; do
 	  echo -e "${gl_kjlan}-------------------------"
 	  echo -e "${gl_kjlan}111. ${color111}多格式文件轉換工具${gl_kjlan}112. ${color112}Lucky大內網穿透工具"
 	  echo -e "${gl_kjlan}113. ${color113}Firefox瀏覽器${gl_kjlan}114. ${color114}Xboard節點管理面板"
+	  echo -e "${gl_kjlan}115. ${color115}BTCPay虛擬貨幣支付平台"
 	  echo -e "${gl_kjlan}-------------------------"
 	  echo -e "${gl_kjlan}第三方應用列表"
   	  echo -e "${gl_kjlan}想要讓你的應用出現在這裡？查看開發者指南:${gl_huang}https://dev.kejilion.sh/${gl_bai}"
@@ -13228,6 +13229,61 @@ discourse,yunsou,ahhhhfs,nsgame,gying" \
 
 		  	;;
 
+		115|BTCPay)
+			local app_id="115"
+			local app_name="BTCPay支付平台"
+			local app_text="是一個自託管、開源比特幣支付處理器。"
+			local app_url="官方網站: https://github.com/btcpayserver/btcpayserver-docker"
+			local docker_name="btcpay"
+			local docker_port="8115"
+			local app_size="4"
+			local app_domain
+
+			docker_app_install() {
+				
+				read -e -p "輸入應用解析後的域名(example.com):" app_domain
+				install git
+
+				mkdir -p /home/docker/btcpay
+				cd /home/docker/btcpay
+
+				git clone https://github.com/btcpayserver/btcpayserver-docker
+				cd /home/docker/btcpay/btcpayserver-docker
+
+				# Run btcpay-setup.sh with the right parameters
+				export BTCPAY_HOST=${app_domain}
+				export NBITCOIN_NETWORK="mainnet"
+				export BTCPAYGEN_CRYPTO1="btc"
+				export BTCPAYGEN_ADDITIONAL_FRAGMENTS="opt-save-storage-s"
+				export BTCPAYGEN_REVERSEPROXY="nginx"
+				export BTCPAYGEN_LIGHTNING="clightning"
+				export BTCPAY_ENABLE_SSH=true
+				export REVERSEPROXY_HTTPS_PORT=${docker_port}
+
+				. ./btcpay-setup.sh -i
+				clear
+				echo "已經安裝完成"
+				check_docker_app_ip
+			}
+
+
+			docker_app_update() {
+				cd /home/docker/xboard/ && docker compose pull
+				cd /home/docker/xboard/ && docker compose run -it --rm web php artisan xboard:update
+				cd /home/docker/xboard/ && docker compose up -d
+			}
+
+
+			docker_app_uninstall() {
+				cd /home/docker/btcpay/ && docker compose down --rmi all
+				rm -rf /home/docker/btcpay
+				echo "應用已卸載"
+			}
+
+			docker_app_plus
+
+		  	;;
+
 
 	  b)
 	  	clear
@@ -15005,9 +15061,108 @@ EOF
 	done
 }
 
+linux_service() {
+	while true; do
+		clear
+		echo -e "服務管理"
+		echo -e "${gl_kjlan}------------------------${gl_bai}"
+		echo -e "${gl_kjlan}1.  ${gl_bai}證書管理"
+		echo -e "${gl_kjlan}------------------------${gl_bai}"
+		echo -e "${gl_kjlan}0.  ${gl_bai}返回上一級選單"
+		echo -e "${gl_kjlan}------------------------${gl_bai}"
+		read -e -p "請輸入你的選擇:" sub_choice
+		case $sub_choice in
+			1)
+				cert_manage
+				;;
+			*)
+				kejilion
+				;;
+		esac
+	done
+}
 
+cert_manage() {
+	root_use
+	install nginx
+	while true; do
+		clear
+		echo -e "證書管理"
+		echo -e "${gl_kjlan}------------------------${gl_bai}"
+		echo -e "${gl_kjlan}Let's Encrypt${gl_bai}"
+		echo -e "${gl_kjlan}1. ${gl_bai}申請證書${gl_kjlan}2. ${gl_bai}刪除證書"
+		echo -e "${gl_kjlan}3. ${gl_bai}自動更新證書${gl_kjlan}4. ${gl_bai}手動更新證書"
+		echo -e "${gl_kjlan}5. ${gl_bai}查看證書有效期"
+		echo -e "${gl_kjlan}------------------------${gl_bai}"
+		echo -e "${gl_kjlan}0. ${gl_bai}返回上一級選單"
+		echo -e "${gl_kjlan}------------------------${gl_bai}"
+		read -e -p "請輸入你的選擇:" sub_choice
 
+		case $sub_choice in
+			1) 
+				read -p "請輸入解析後的域名（exmple.com）:" domain
+				install certbot python3-certbot-nginx -y
+				echo "${domain}"
+				#certbot --nginx -d ${domain}
+				break_end
+				;;
+			2)
+				echo "刪除證書功能暫未實現"
+                break_end
+				;;
+			3)
+				echo "正在更新 Let's Encrypt 證書..."
+    			certbot renew --quiet --deploy-hook "nginx -s reload"
+				echo "證書更新完成"
+				break_end
+				;;
+			4)
+				echo "手動更新證書"
 
+                # 判斷 nginx 目錄是否存在
+                if [ ! -d "/etc/nginx" ]; then
+                    echo "❌ 未檢測到 /etc/nginx，請先安裝 Nginx"
+                    break_end
+					continue
+                fi
+
+				# 創建目錄
+				default_dir="/etc/nginx/ssl"
+				read -e -p "請輸入要創建的目錄名 [默認:$default_dir]: " dirname
+				dirname=${dirname:-$default_dir}
+				mkdir -p "$dirname" && echo "目錄已創建：$dirname" || echo "創建失敗"
+
+				cd "$dirname" 2>/dev/null || echo "無法進入目錄"
+				echo "📂 當前已有證書列表："
+				ls "$dirname"
+
+				read -e -p "請輸入要編輯的文件名:" filename
+				install nano
+				nano "$filename"
+
+				break_end
+				;;
+			5)
+				echo "查看證書有效期"
+
+                if command -v certbot >/dev/null 2>&1; then
+                    certbot certificates
+                else
+                    echo "❌ 未安裝 certbot"
+                fi
+
+                break_end
+				;;
+			0)
+                break
+                ;;
+            *)
+                echo "無效選擇，請重新輸入"
+                break_end
+                ;;
+		esac
+	done
+}
 
 
 cluster_python3() {
@@ -15044,7 +15199,6 @@ run_commands_on_servers() {
 	break_end
 
 }
-
 
 linux_cluster() {
 mkdir cluster
@@ -15387,9 +15541,10 @@ echo -e "${gl_huang}10.  ${gl_bai}LDNMP建站"
 echo -e "${gl_kjlan}11.  ${gl_bai}應用市場"
 echo -e "${gl_kjlan}12.  ${gl_bai}後台工作區"
 echo -e "${gl_kjlan}13.  ${gl_bai}系統工具"
-echo -e "${gl_kjlan}14.  ${gl_bai}服務器集群控制"
-echo -e "${gl_kjlan}15.  ${gl_bai}廣告專欄"
-echo -e "${gl_kjlan}16.  ${gl_bai}遊戲開服腳本合集"
+echo -e "${gl_kjlan}14.  ${gl_bai}服務管理"
+echo -e "${gl_kjlan}15.  ${gl_bai}服務器集群控制"
+echo -e "${gl_kjlan}16.  ${gl_bai}廣告專欄"
+echo -e "${gl_kjlan}17.  ${gl_bai}遊戲開服腳本合集"
 echo -e "${gl_kjlan}------------------------${gl_bai}"
 echo -e "${gl_kjlan}00.  ${gl_bai}腳本更新"
 echo -e "${gl_kjlan}------------------------${gl_bai}"
@@ -15413,9 +15568,10 @@ case $choice in
   11) linux_panel ;;
   12) linux_work ;;
   13) linux_Settings ;;
-  14) linux_cluster ;;
-  15) kejilion_Affiliates ;;
-  16) games_server_tools ;;
+  14) linux_service ;;
+  15) linux_cluster ;;
+  16) kejilion_Affiliates ;;
+  17) games_server_tools ;;
   00) kejilion_update ;;
   0) clear ; exit ;;
   *) echo "無效的輸入!" ;;
