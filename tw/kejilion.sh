@@ -15136,9 +15136,21 @@ cert_manage() {
 				echo "📂 當前已有證書列表："
 				ls "$dirname"
 
-				read -e -p "請輸入要編輯的文件名:" filename
+				read -e -p "請輸入要編輯的文件名（cert.pem）:" filename
 				install nano
 				nano "$filename"
+				read -e -p "請輸入要編輯的文件名（key.pem）:" filename
+				nano "$filename"
+				chmod 600 "${filename}"
+
+				# 修改nginx配置
+				default_dir="/etc/nginx/sites-available/default"
+				read -e -p "請輸入要創建的目錄名 [默認:$default_dir]: " dirname
+				dirname=${dirname:-$default_dir}
+				nano "$dirname"
+
+				nginx -t
+				systemctl reload nginx
 
 				break_end
 				;;
