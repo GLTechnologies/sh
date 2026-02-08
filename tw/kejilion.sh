@@ -15103,7 +15103,7 @@ cert_manage() {
 				read -p "請輸入解析後的域名（exmple.com）:" domain
 				install certbot python3-certbot-nginx -y
 				echo "${domain}"
-				#certbot --nginx -d ${domain}
+				certbot --nginx -d ${domain}
 				break_end
 				;;
 			2)
