@@ -797,14 +797,14 @@ docker_ipv6_on() {
 		# 檢查目前配置是否已經有 ipv6 設定
 		local CURRENT_IPV6=$(echo "$ORIGINAL_CONFIG" | jq '.ipv6 // false')
 
-		# 更新配置，開啟 IPv6
+		# 更新配置，开启 IPv6
 		if [[ "$CURRENT_IPV6" == "false" ]]; then
 			UPDATED_CONFIG=$(echo "$ORIGINAL_CONFIG" | jq '. + {ipv6: true, "fixed-cidr-v6": "2001:db8:1::/64"}')
 		else
 			UPDATED_CONFIG=$(echo "$ORIGINAL_CONFIG" | jq '. + {"fixed-cidr-v6": "2001:db8:1::/64"}')
 		fi
 
-		# 比較原始配置與新配置
+		# 对比原始配置与新配置
 		if [[ "$ORIGINAL_CONFIG" == "$UPDATED_CONFIG" ]]; then
 			echo -e "${gl_huang}目前已開啟ipv6訪問${gl_bai}"
 		else
@@ -1625,7 +1625,7 @@ certs_status() {
 			done
 
 			# 3. 智能校驗
-			# 只要包含 "BEGIN CERTIFICATE" 和 "PRIVATE KEY" 即可透過
+			# 只要包含 "BEGIN CERTIFICATE" 和 "PRIVATE KEY" 即可通过
 			if [[ "$cert_content" == *"-----BEGIN CERTIFICATE-----"* && "$key_content" == *"PRIVATE KEY-----"* ]]; then
 				echo -n "$cert_content" > "$cert_file"
 				echo -n "$key_content" > "$key_file"
@@ -1697,7 +1697,7 @@ update_nginx_listen_port() {
 	local access_port="$2"
 	local conf="/home/web/conf.d/${yuming}.conf"
 
-	# 如果 access_port 為空，則跳過
+	# 如果 access_port 为空，则跳过
 	[ -z "$access_port" ] && return 0
 
 	# 刪除所有 listen 行
@@ -2936,7 +2936,7 @@ edit_app_description() {
 
 		# ===== 啟動超時看門狗 =====
 		(
-			# ===== 關閉鎖 FD，防止繼承 =====
+			# ===== 关闭锁 FD，防止继承 =====
 			exec 9>&-
 
 			sleep "$EDIT_TIMEOUT"
@@ -5215,7 +5215,7 @@ dd_xitong() {
 
 
 			  21)
-				send_stats "重裝rockylinux10"
+				send_stats "重装rockylinux10"
 				dd_xitong_3
 				bash reinstall.sh rocky
 				reboot
@@ -11624,7 +11624,7 @@ while true; do
 		}
 
 		local docker_describe="免費線上影片搜尋與觀看平台"
-		local docker_url="官網介紹: https://github.com/LibreSpark/LibreTV"
+		local docker_url="官网介绍: https://github.com/LibreSpark/LibreTV"
 		local docker_use=""
 		local docker_passwd=""
 		local app_size="1"
@@ -15136,10 +15136,10 @@ cert_manage() {
 				echo "📂 目前已有證書清單："
 				ls "$dirname"
 
-				read -e -p "請輸入要編輯的檔名（cert.pem）:" filename
+				read -e -p "请输入要编辑的文件名（cert.pem）: " filename
 				install nano
 				nano "$filename"
-				read -e -p "請輸入要編輯的檔名（key.pem）:" filename
+				read -e -p "请输入要编辑的文件名（key.pem）: " filename
 				nano "$filename"
 				chmod 600 "${filename}"
 
