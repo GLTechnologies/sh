@@ -152,7 +152,7 @@ syncRTC() {
 		echo "系統 時間: $(date -d"@${sys_ts}" "+%Y-%m-%d %H:%M:%S")"
 		echo "RTC 時間: $(date -d"@${rtc_ts}" "+%Y-%m-%d %H:%M:%S")"
 
-    	read -p "時間相差${abs_diff}s，是否將系統時間同步為 RTC 時間？ (y/n):" yn
+    	read -p "時間相差${abs_diff}s，是否将系统时间同步为 RTC 时间？ (y/n):" yn
         case $yn in
             [Yy] )
 				echo "正在同步系統時間..."
@@ -2385,7 +2385,7 @@ check_nginx_compression() {
 
 	# 檢查 gzip 是否開啟且未被註釋
 	if grep -qE '^\s*gzip\s+on;' "$CONFIG_FILE"; then
-		gzip_status=" gzip压缩已开启"
+		gzip_status="gzip壓縮已開啟"
 	else
 		gzip_status=""
 	fi
@@ -4243,7 +4243,7 @@ remote_port = ${remote_port}
 EOF
 
 	# 輸出產生的信息
-	echo "服務$service_name已成功加入 frpc.toml"
+	echo "服務$service_name已成功加入到 frpc.toml"
 
 	docker restart frpc
 
@@ -13187,7 +13187,7 @@ discourse,yunsou,ahhhhfs,nsgame,gying" \
 		114|xboard)
 			local app_id="114"
 			local app_name="xboard節點管理面板"
-			local app_text="是一個基於 Laravel 11 建構的現代化節點面板系統，專注於提供簡潔且有效率的使用者體驗。"
+			local app_text="是一个基于 Laravel 11 构建的现代化节点面板系统，专注于提供简洁高效的用户体验。"
 			local app_url="官方網站: https://github.com/cedar2025/Xboard"
 			local docker_name="xboard"
 			local docker_port="8114"
@@ -13856,7 +13856,7 @@ EOF
 						send_stats "SSH連接埠已修改"
 						new_ssh_port
 					elif [[ $new_port -eq 0 ]]; then
-						send_stats "退出SSH連接埠修改"
+						send_stats "退出SSH埠修改"
 						break
 					else
 						echo "連接埠號碼無效，請輸入1到65535之間的數字。"
@@ -15091,7 +15091,7 @@ cert_manage() {
 		echo -e "${gl_kjlan}------------------------${gl_bai}"
 		echo -e "${gl_kjlan}Let's Encrypt${gl_bai}"
 		echo -e "${gl_kjlan}1. ${gl_bai}申請證書${gl_kjlan}2. ${gl_bai}刪除證書"
-		echo -e "${gl_kjlan}3. ${gl_bai}自動更新證書${gl_kjlan}4. ${gl_bai}手动更新证书"
+		echo -e "${gl_kjlan}3. ${gl_bai}自動更新證書${gl_kjlan}4. ${gl_bai}手動更新證書"
 		echo -e "${gl_kjlan}5. ${gl_bai}查看證書有效期限"
 		echo -e "${gl_kjlan}------------------------${gl_bai}"
 		echo -e "${gl_kjlan}0. ${gl_bai}回上一級選單"
@@ -15169,7 +15169,7 @@ cert_manage() {
                 break
                 ;;
             *)
-                echo "無效選擇，請重新輸入"
+                echo "无效选择，请重新输入"
                 break_end
                 ;;
 		esac
