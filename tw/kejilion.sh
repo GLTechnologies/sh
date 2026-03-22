@@ -152,7 +152,7 @@ syncRTC() {
 		echo "系統 時間: $(date -d"@${sys_ts}" "+%Y-%m-%d %H:%M:%S")"
 		echo "RTC 時間: $(date -d"@${rtc_ts}" "+%Y-%m-%d %H:%M:%S")"
 
-    	read -p "時間相差${abs_diff}s，是否将系统时间同步为 RTC 时间？ (y/n):" yn
+    	read -p "時間相差${abs_diff}s，是否將系統時間同步為 RTC 時間？ (y/n):" yn
         case $yn in
             [Yy] )
 				echo "正在同步系統時間..."
@@ -1259,7 +1259,7 @@ iptables_panel() {
 add_swap() {
 	local new_swap=$1  # 获取传入的参数
 
-	# 取得目前系統中所有的 swap 分割區
+	# 取得目前系統中所有的 swap 分區
 	local swap_partitions=$(grep -E '^/dev/' /proc/swaps | awk '{print $1}')
 
 	# 遍歷並刪除所有的 swap 分割區
@@ -2936,7 +2936,7 @@ edit_app_description() {
 
 		# ===== 啟動超時看門狗 =====
 		(
-			# ===== 關閉鎖 FD，防止繼承 =====
+			# ===== 关闭锁 FD，防止继承 =====
 			exec 9>&-
 
 			sleep "$EDIT_TIMEOUT"
@@ -2963,7 +2963,7 @@ edit_app_description() {
 
 		lines=$(wc -l < "$desc_file")
 		echo "應用程式描述已儲存（${lines}/10 行）"
-		# ===== 釋放鎖定（函數退出會自動釋放 FD 9）=====
+		# ===== 释放锁（函数退出会自动释放 FD 9）=====
 	)
 }
 
@@ -10949,7 +10949,7 @@ while true; do
 			ip_address
 			echo "已經安裝完成"
 			check_docker_app_ip
-			echo "初始使用者名稱密碼均為: admin"
+			echo "初始使用者名稱密碼皆為: admin"
 		}
 
 		docker_app_update() {
@@ -10991,7 +10991,7 @@ while true; do
 		}
 
 		local docker_describe="這是一個普羅米修斯的主機資料擷取元件，請部署在被監控主機上。"
-		local docker_url="官網介紹: https://github.com/prometheus/node_exporter"
+		local docker_url="官网介绍: https://github.com/prometheus/node_exporter"
 		local docker_use=""
 		local docker_passwd=""
 		local app_size="1"
@@ -11044,7 +11044,7 @@ while true; do
 		}
 
 		local docker_describe="這是一個網站變更偵測、補貨監控和通知的小工具"
-		local docker_url="官網介紹: https://github.com/dgtlmoon/changedetection.io"
+		local docker_url="官网介绍: https://github.com/dgtlmoon/changedetection.io"
 		local docker_use=""
 		local docker_passwd=""
 		local app_size="1"
@@ -13187,7 +13187,7 @@ discourse,yunsou,ahhhhfs,nsgame,gying" \
 		114|xboard)
 			local app_id="114"
 			local app_name="xboard節點管理面板"
-			local app_text="是一个基于 Laravel 11 构建的现代化节点面板系统，专注于提供简洁高效的用户体验。"
+			local app_text="是一個基於 Laravel 11 建構的現代化節點面板系統，專注於提供簡潔且有效率的使用者體驗。"
 			local app_url="官方網站: https://github.com/cedar2025/Xboard"
 			local docker_name="xboard"
 			local docker_port="8114"
@@ -13233,7 +13233,7 @@ discourse,yunsou,ahhhhfs,nsgame,gying" \
 			local app_id="115"
 			local app_name="BTCPay支付平台"
 			local app_text="是一個自託管、開源比特幣支付處理器。"
-			local app_url="官方網站: https://github.com/btcpayserver/btcpayserver-docker"
+			local app_url="官方网站: https://github.com/btcpayserver/btcpayserver-docker"
 			local docker_name="btcpay"
 			local docker_port="8115"
 			local app_size="4"
@@ -15169,7 +15169,7 @@ cert_manage() {
                 break
                 ;;
             *)
-                echo "无效选择，请重新输入"
+                echo "無效選擇，請重新輸入"
                 break_end
                 ;;
 		esac
